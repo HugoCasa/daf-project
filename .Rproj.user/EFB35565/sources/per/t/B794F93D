@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1575804974109.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3265279194",
+    "id" : "B794F93D",
+    "lastKnownWriteTime" : 1575803969,
+    "last_content_update" : 1575803969,
+    "path" : "~/Google Drive/DAF_Project/RProject/DataHandling.R",
+    "project_path" : "DataHandling.R",
+    "properties" : {
+        "cursorPosition" : "4,13",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
