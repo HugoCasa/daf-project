@@ -28,8 +28,9 @@ for(s in allStocks){
   
   # Get log returns
   logReturns = diff(log(priceAdjusted))
-  df <- data.frame(logReturns)
-  colnames(df) <- 'returns'
+  simpleReturns = priceAdjusted[2:length(priceAdjusted)]/priceAdjusted[1:length(priceAdjusted)-1] - 1
+  df <- data.frame(simpleReturns,logReturns)
+  colnames(df) <- c('simpleReturns','logReturns')
   rownames(df) <- t$datadate[2:length(priceAdjusted)]
   
   # Create a dataframe with named after the stock
@@ -37,5 +38,5 @@ for(s in allStocks){
 }
 
 # Remove not needed variables
-rm(list=c('df','t','allStocks','fileDir','name','priceAdjusted','s', 'i','logReturns'))
+rm(list=c('df','t','allStocks','fileDir','name','priceAdjusted','s', 'i','logReturns','simpleReturns'))
 
