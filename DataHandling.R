@@ -25,14 +25,17 @@ for(s in allStocks){
   
   # Get the adjusted closing price with the adjustment factor
   priceAdjusted = t$prccd/t$ajexdi
-  df <- data.frame(priceAdjusted)
-  colnames(df) <- 'price'
-  rownames(df) <- t$datadate
+  
+  # Get log returns
+  logReturns = diff(log(priceAdjusted))
+  df <- data.frame(logReturns)
+  colnames(df) <- 'returns'
+  rownames(df) <- t$datadate[2:length(priceAdjusted)]
   
   # Create a dataframe with named after the stock
   assign(name,df)
 }
 
 # Remove not needed variables
-rm(list=c('df','t','allStocks','fileDir','name','priceAdjusted','s', 'i'))
+rm(list=c('df','t','allStocks','fileDir','name','priceAdjusted','s', 'i','logReturns'))
 
