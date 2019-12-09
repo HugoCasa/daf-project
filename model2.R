@@ -49,8 +49,66 @@ s <- sqrt(h)
 plot(gfit01@sigma.t ,type='l')
 lines(s,col='green')
 
+# Functions
+GARCH_ht <- function(omega,alpha,beta,hPrevious,zPrevious){
+  epsilon <- sqrt(hPrevious)*zPrevious
+  h <- omega + alpha1*epsilon^2 + beta1*hPrevious
+  return(h)
+}
 
+MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
+  print(h)
+  # MC number simulations
+  n <- 1000
+  
+  # Create a random residual matrix by sampling from standardized residuals
+  residMat <- matrix(data=sample(standardResid,n,replace = TRUE),ncol = days, nrow=n)
+  
+  # Create a matrix to store ht of simulations
+  hMat <- matrix(ncol = days,nrow = n)
+  
+  # The variance of the first simulated day is the same for all
+  hMat[,1] <- h
+  
+  # Apply the GARCH_ht function to get variance for each simulated day, depending on variance and residual of t-1
+  for(j in 2:days){
+    hMat[,j] <- GARCH_ht(omega,alpha,beta,hMat[,j-1],residMat[,j-1])
+  }
+  
+  # Simulate daily returns by multiplying the random residuals with the conditional volatility
+  retMat <- residMat*sqrt(hMat) + mu
+  
+  # Cumulative log returns of all days
+  retMat <- rowSums(retMat)
+  
+  # Get the VaR of the given risk level with the quantile function
+  VaR <- quantile(retMat,VaR_alpha)
+  
+  return(VaR)
+}
 
+MC_VaR_AllDays <- function(ht,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
+ h <- c(1:length(ht))
+ h <- 0
+ for(i in 1:length(ht)){
+   h[i] <- MC_VaR_OneDay(ht[i],mu,omega,alpha1,beta1,Z,days,VaR_alpha)
+ }
+ return(h)
+}
+
+logReturns5Days <- function(lR){
+  sumReturns <- lR[1:(length(lR)-4)]+lR[2:(length(lR)-3)]+lR[3:(length(lR)-2)]+lR[(4:(length(lR)-1))]+lR[(5:length(lR))]
+}
+
+amd5DayLogReturns <- logReturns5Days(AMD$logReturns)
+VaR5Days <- MC_VaR_AllDays(gfit01@h.t,mu,omega,alpha1,beta1,Z,5,0.05)
+
+plot(amd5DayLogReturns)
+lines(VaR5Days[1:length(amd5DayLogReturns)],col='green')
+
+hitSeq       <- amd5DayLogReturns< VaR5Days[1:length(amd5DayLogReturns)]
+numberOfHits <- sum(hitSeq)
+exRatio      <- numberOfHits/length(AMD$logReturns)
 
 
 
