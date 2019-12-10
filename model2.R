@@ -6,14 +6,47 @@ lapply(libraries, function(x) if (!(x %in% installed.packages())) {
 
 lapply(c(libraries), require, character.only = TRUE)
 
+## Parameters
+
 # Students t distribution
 condDist <- "std"
 
-## GARCH
-gfit01  <- garchFit(formula = ~ garch(1, 1), data=AMD$logReturns, cond.dist=condDist)
+
+## Fit GARCH on all marginal returns
+for(s in stockList){
+  assign(paste(s,'gfit',sep = ''),garchFit(formula = ~ garch(1, 1), data=get(s)$logReturns, cond.dist=condDist))
+}
+
+# Coefficients of all marginal returns
+for(s in stockList){
+  assign(paste(s,'mu',sep = ''),coef(get(paste(s,'gfit',sep = '')))[1])
+  assign(paste(s,'omega',sep = ''),coef(get(paste(s,'gfit',sep = '')))[2])
+  assign(paste(s,'alpha1',sep = ''),coef(get(paste(s,'gfit',sep = '')))[3])
+  assign(paste(s,'beta',sep = ''),coef(get(paste(s,'gfit',sep = '')))[4])
+}
+
+# Standardized residuals and unconditional volatility for all marginal return distributions
+for(s in stockList){
+  assign(paste(s,'Z',sep = ''),(get(paste(s,'gfit',sep=''))@residuals-get(paste(s,'mu',sep='')))/get(paste(s,'gfit',sep=''))@sigma.t)
+}
+
+## Copula
+
+
+
+
+#### Code below for trial purpose
+
+# Plot all standardized residuals
+for(s in stockList){
+  plot(get(paste(s,'Z',sep='')),type='l')
+}
+
 
 # TGARCH
 #gfit01  <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=AMD$logReturns, cond.dist=condDist)
+
+gfit01  <- garchFit(formula = ~ garch(1, 1), data=AMD$logReturns, cond.dist=condDist)
 
 mu <- coef(gfit01)[1]
 omega <- coef(gfit01)[2]
@@ -49,6 +82,9 @@ s <- sqrt(h)
 plot(gfit01@sigma.t ,type='l')
 lines(s,col='green')
 
+# One day VaR
+
+
 # Functions
 GARCH_ht <- function(omega,alpha,beta,hPrevious,zPrevious){
   epsilon <- sqrt(hPrevious)*zPrevious
@@ -57,7 +93,6 @@ GARCH_ht <- function(omega,alpha,beta,hPrevious,zPrevious){
 }
 
 MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
-  print(h)
   # MC number simulations
   n <- 1000
   
@@ -71,10 +106,11 @@ MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
   hMat[,1] <- h
   
   # Apply the GARCH_ht function to get variance for each simulated day, depending on variance and residual of t-1
-  for(j in 2:days){
-    hMat[,j] <- GARCH_ht(omega,alpha,beta,hMat[,j-1],residMat[,j-1])
+  if(days > 1){
+    for(j in 2:days){
+      hMat[,j] <- GARCH_ht(omega,alpha,beta,hMat[,j-1],residMat[,j-1])
+    }
   }
-  
   # Simulate daily returns by multiplying the random residuals with the conditional volatility
   retMat <- residMat*sqrt(hMat) + mu
   
@@ -96,20 +132,18 @@ MC_VaR_AllDays <- function(ht,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
  return(h)
 }
 
-logReturns5Days <- function(lR){
-  sumReturns <- lR[1:(length(lR)-4)]+lR[2:(length(lR)-3)]+lR[3:(length(lR)-2)]+lR[(4:(length(lR)-1))]+lR[(5:length(lR))]
-}
 
-amd5DayLogReturns <- logReturns5Days(AMD$logReturns)
-VaR5Days <- MC_VaR_AllDays(gfit01@h.t,mu,omega,alpha1,beta1,Z,5,0.05)
 
-plot(amd5DayLogReturns)
-lines(VaR5Days[1:length(amd5DayLogReturns)],col='green')
+# Try 5 day MC
 
-hitSeq       <- amd5DayLogReturns< VaR5Days[1:length(amd5DayLogReturns)]
+VaR <- MC_VaR_AllDays(gfit01@h.t[1:(length(gfit01@h.t)-1)],mu,omega,alpha1,beta1,Z,1,0.05)*sqrt(5)
+
+plot(AMD5day$logReturns)
+lines(VaR,col='green')
+
+hitSeq       <- AMD5day$logReturns< VaR
 numberOfHits <- sum(hitSeq)
 exRatio      <- numberOfHits/length(AMD$logReturns)
-
 
 
 
