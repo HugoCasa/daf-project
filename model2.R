@@ -12,7 +12,7 @@ condDist <- "std"
 N <- 1000
 
 # Alpha
-VaR_alpha <- 0.05
+VaR_alpha <- 0.01
 ## Fit GARCH on all marginal returns
 for(s in stockList){
   assign(paste(s,'gfit',sep = ''),garchFit(formula = ~ garch(1, 1), data=get(s)$logReturns, cond.dist=condDist))
@@ -71,7 +71,7 @@ XOMZdf <- XOMZfit$estimate[["df"]]
 copula_dist <- mvdc(copula=claytonCopula(theta, dim = length(stockList)), margins=c('t','t','t','t','t'),
                     paramMargins = list(df=AMDZdf,df=BAZdf,df=MCDZdf,df=WMTZdf,df=XOMZdf))
 
-simStandardizedResiduals <- rMvdc(copula_dist, n=N*5)
+simStandardizedResiduals <- rMvdc(copula_dist, n=N*10)
 
 simStandardizedResiduals[,1] <- simStandardizedResiduals[,1]*AMDZs+AMDZmu
 simStandardizedResiduals[,2] <- simStandardizedResiduals[,2]*BAZs+BAZmu
@@ -245,6 +245,12 @@ print("Critical value of Chi2 at 99%")
 print(qchisq(.99, 1))
 print("Kupiec Statistic:")
 print(K)
+
+
+
+
+
+
 
 ### Nice plots
 
