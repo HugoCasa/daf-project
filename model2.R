@@ -1,10 +1,7 @@
-libraries = c("fGarch")
-
-lapply(libraries, function(x) if (!(x %in% installed.packages())) {
-  install.packages(x, repos = "http://cran.uni-muenster.de/")
-})
-
-lapply(c(libraries), require, character.only = TRUE)
+library("VineCopula")
+library("copula")
+library("fGarch")
+library("MASS")
 
 ## Parameters
 
@@ -31,9 +28,55 @@ for(s in stockList){
 }
 
 ## Copula
+claytonCop <- claytonCopula(dim=length(stockList))
+
+# m, make universal
+m <- pobs(as.matrix(cbind(AMDZ,BAZ,MCDZ,WMTZ,XOMZ)))
+fit <- fitCopula(claytonCop,m,method='ml')
+theta <- coef(fit)
+
+AMDZfit <- fitdistr(AMDZ,"t")
+AMDZmu <- AMDZfit$estimate[["m"]]
+AMDZs <- AMDZfit$estimate[["s"]]
+AMDZdf <- AMDZfit$estimate[["df"]]
+
+BAZfit <- fitdistr(BAZ,"t")
+BAZmu <- BAZfit$estimate[["m"]]
+BAZs <- BAZfit$estimate[["s"]]
+BAZdf <- BAZfit$estimate[["df"]]
+
+MCDZfit <- fitdistr(MCDZ,"t")
+MCDZmu <- MCDZfit$estimate[["m"]]
+MCDZs <- MCDZfit$estimate[["s"]]
+MCDZdf <- MCDZfit$estimate[["df"]]
+
+WMTZfit <- fitdistr(WMTZ,"t")
+WMTZmu <- WMTZfit$estimate[["m"]]
+WMTZs <- WMTZfit$estimate[["s"]]
+WMTZdf <- WMTZfit$estimate[["df"]]
+
+XOMZfit <- fitdistr(XOMZ,"t")
+XOMZmu <- XOMZfit$estimate[["m"]]
+XOMZs <- XOMZfit$estimate[["s"]]
+XOMZdf <- XOMZfit$estimate[["df"]]
 
 
 
+copula_dist <- mvdc(copula=claytonCopula(theta, dim = length(stockList)), margins=c('t','t','t','t','t'),
+                    paramMargins = list(df=AMDZdf,df=BAZdf,df=MCDZdf,df=WMTZdf,df=XOMZdf))
+
+sim <- rMvdc(copula_dist, n=7541)
+
+sim[,1] <- sim[,1]*AMDZs+AMDZmu
+sim[,2] <- sim[,2]*BAZs+BAZmu
+sim[,3] <- sim[,3]*MCDZs+MCDZmu
+sim[,4] <- sim[,4]*WMTZs+WMTZmu
+sim[,5] <- sim[,5]*XOMZs+XOMZmu
+
+# Compare observed and simulated values
+plot(AMDZ,BAZ,main='Returns')
+points(sim[,1],sim[,2],col='red')
+legend('bottomright',c('Observed','Simulated'),col=c('black','red'),pch=21)
 
 #### Code below for trial purpose
 
@@ -42,6 +85,14 @@ for(s in stockList){
   plot(get(paste(s,'Z',sep='')),type='l')
 }
 
+# Residuals vs. returns
+
+plot(AMD$logReturns,type = 'l',col='green')
+lines(AMDgfit@residuals)
+
+
+
+### Test GARCH ht function
 
 # TGARCH
 #gfit01  <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=AMD$logReturns, cond.dist=condDist)
@@ -66,6 +117,7 @@ lines(Z,col='green')
 
 # ht 0
 ht0 <- omega/(1-alpha1-beta1)
+ht0 <- 0.2
 epsilon <- sqrt(ht0)*Z[1]
 
 h <- c(NA)
@@ -81,6 +133,8 @@ s <- sqrt(h)
 
 plot(gfit01@sigma.t ,type='l')
 lines(s,col='green')
+
+
 
 # One day VaR
 
@@ -108,7 +162,7 @@ MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
   # Apply the GARCH_ht function to get variance for each simulated day, depending on variance and residual of t-1
   if(days > 1){
     for(j in 2:days){
-      hMat[,j] <- GARCH_ht(omega,alpha,beta,hMat[,j-1],residMat[,j-1])
+      hMat[,j] <- GARCH_ht(omega,alpha,beta,hMat[,j-1],residMat[,j-1])/sqrt(days)
     }
   }
   # Simulate daily returns by multiplying the random residuals with the conditional volatility
@@ -136,7 +190,7 @@ MC_VaR_AllDays <- function(ht,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
 
 # Try 5 day MC
 
-VaR <- MC_VaR_AllDays(gfit01@h.t[1:(length(gfit01@h.t)-1)],mu,omega,alpha1,beta1,Z,1,0.05)*sqrt(5)
+VaR <- MC_VaR_AllDays(gfit01@h.t[1:(length(gfit01@h.t))],mu,omega,alpha1,beta1,Z,1,0.05)*sqrt(5)
 
 plot(AMD5day$logReturns)
 lines(VaR,col='green')
