@@ -73,9 +73,12 @@ sim[,3] <- sim[,3]*MCDZs+MCDZmu
 sim[,4] <- sim[,4]*WMTZs+WMTZmu
 sim[,5] <- sim[,5]*XOMZs+XOMZmu
 
-# Compare observed and simulated values
-plot(AMDZ,BAZ,main='Returns')
-points(sim[,1],sim[,2],col='red')
+
+### Nice plots
+
+# Compare observed and simulated standardized returns
+plot(AMDZ,XOMZ,main='Returns')
+points(sim[,1],sim[,5],col='red')
 legend('bottomright',c('Observed','Simulated'),col=c('black','red'),pch=21)
 
 #### Code below for trial purpose
