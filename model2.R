@@ -12,7 +12,10 @@ condDist <- "std"
 N <- 1000
 
 # Alpha
-VaR_alpha <- 0.01
+VaR_alpha <- 0.05
+
+
+
 ## Fit GARCH on all marginal returns
 for(s in stockList){
   assign(paste(s,'gfit',sep = ''),garchFit(formula = ~ garch(1, 1), data=get(s)$logReturns, cond.dist=condDist))
@@ -34,9 +37,11 @@ for(s in stockList){
 }
 
 ##### Copula
+
+# Define the used copula
 claytonCop <- claytonCopula(dim=length(stockList))
 
-# m, make universal
+# Matrix of marginals, make universal
 m <- pobs(as.matrix(cbind(AMDZ,BAZ,MCDZ,WMTZ,XOMZ)))
 fit <- fitCopula(claytonCop,m,method='ml')
 theta <- coef(fit)
@@ -131,7 +136,7 @@ MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
   #}
   for(j in 1:days){
       sampleI <- sample(c(1:nrow(standardResid)),n,replace=TRUE)
-      residMat[,j,] <- matrix(data=standardResid[sampleI,],ncol = length(stockList), nrow=n)
+      residMat[,j,] <- matrix(data=standardResid[sampleI,], nrow=n, ncol = length(stockList))
   }
   
   
@@ -204,7 +209,7 @@ MC_VaR_AllDays <- function(htMat,meanVec,omegaVec,alpha1Vec,betaVec,simStandardi
 #VaR <- MC_VaR_OneDay(htMat[1,],muVec,omegaVec,alpha1Vec,betaVec,simStandardizedResiduals,5,0.05)
 
 # This uses standardized residuals instead of copula
-# VaR <- MC_VaR_AllDays(htMat,muVec,omegaVec,alpha1Vec,betaVec,ZMat,5,0.05)
+# VaR <- MC_VaR_AllDays(htMat,muVec,omegaVec,alpha1Vec,betaVec,ZMat,5,VaR_alpha)
 
 # VaR with Copula standardized residuals
 VaR <- MC_VaR_AllDays(htMat,muVec,omegaVec,alpha1Vec,betaVec,simStandardizedResiduals,5,VaR_alpha)
@@ -245,11 +250,6 @@ print("Critical value of Chi2 at 99%")
 print(qchisq(.99, 1))
 print("Kupiec Statistic:")
 print(K)
-
-
-
-
-
 
 
 ### Nice plots
