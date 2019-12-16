@@ -1,17 +1,18 @@
-libraries = c("fGarch")
-
-lapply(libraries, function(x) if (!(x %in% installed.packages())) {
-  install.packages(x, repos = "http://cran.uni-muenster.de/")
-})
-
-lapply(c(libraries), require, character.only = TRUE)
+library("VineCopula")
+library("copula")
+library("fGarch")
+library("MASS")
 
 ## Parameters
 
 # Students t distribution
 condDist <- "std"
 
+# Monte Carlo sim
+N <- 1000
 
+# Alpha
+VaR_alpha <- 0.01
 ## Fit GARCH on all marginal returns
 for(s in stockList){
   assign(paste(s,'gfit',sep = ''),garchFit(formula = ~ garch(1, 1), data=get(s)$logReturns, cond.dist=condDist))
@@ -27,13 +28,236 @@ for(s in stockList){
 
 # Standardized residuals and unconditional volatility for all marginal return distributions
 for(s in stockList){
-  assign(paste(s,'Z',sep = ''),(get(paste(s,'gfit',sep=''))@residuals-get(paste(s,'mu',sep='')))/get(paste(s,'gfit',sep=''))@sigma.t)
+  assign(paste(s,'mean',sep = ''),mean(get(paste(s,'gfit',sep=''))@residuals))
+  # assign(paste(s,'Z',sep = ''),(get(paste(s,'gfit',sep=''))@residuals-get(paste(s,'mu',sep='')))/get(paste(s,'gfit',sep=''))@sigma.t)
+  assign(paste(s,'Z',sep = ''),(get(paste(s,'gfit',sep=''))@residuals-get(paste(s,'mean',sep='')))/get(paste(s,'gfit',sep=''))@sigma.t)
 }
 
-## Copula
+##### Copula
+claytonCop <- claytonCopula(dim=length(stockList))
+
+# m, make universal
+m <- pobs(as.matrix(cbind(AMDZ,BAZ,MCDZ,WMTZ,XOMZ)))
+fit <- fitCopula(claytonCop,m,method='ml')
+theta <- coef(fit)
+
+AMDZfit <- fitdistr(AMDZ,"t")
+AMDZmu <- AMDZfit$estimate[["m"]]
+AMDZs <- AMDZfit$estimate[["s"]]
+AMDZdf <- AMDZfit$estimate[["df"]]
+
+BAZfit <- fitdistr(BAZ,"t")
+BAZmu <- BAZfit$estimate[["m"]]
+BAZs <- BAZfit$estimate[["s"]]
+BAZdf <- BAZfit$estimate[["df"]]
+
+MCDZfit <- fitdistr(MCDZ,"t")
+MCDZmu <- MCDZfit$estimate[["m"]]
+MCDZs <- MCDZfit$estimate[["s"]]
+MCDZdf <- MCDZfit$estimate[["df"]]
+
+WMTZfit <- fitdistr(WMTZ,"t")
+WMTZmu <- WMTZfit$estimate[["m"]]
+WMTZs <- WMTZfit$estimate[["s"]]
+WMTZdf <- WMTZfit$estimate[["df"]]
+
+XOMZfit <- fitdistr(XOMZ,"t")
+XOMZmu <- XOMZfit$estimate[["m"]]
+XOMZs <- XOMZfit$estimate[["s"]]
+XOMZdf <- XOMZfit$estimate[["df"]]
 
 
 
+copula_dist <- mvdc(copula=claytonCopula(theta, dim = length(stockList)), margins=c('t','t','t','t','t'),
+                    paramMargins = list(df=AMDZdf,df=BAZdf,df=MCDZdf,df=WMTZdf,df=XOMZdf))
+
+simStandardizedResiduals <- rMvdc(copula_dist, n=N*10)
+
+simStandardizedResiduals[,1] <- simStandardizedResiduals[,1]*AMDZs+AMDZmu
+simStandardizedResiduals[,2] <- simStandardizedResiduals[,2]*BAZs+BAZmu
+simStandardizedResiduals[,3] <- simStandardizedResiduals[,3]*MCDZs+MCDZmu
+simStandardizedResiduals[,4] <- simStandardizedResiduals[,4]*WMTZs+WMTZmu
+simStandardizedResiduals[,5] <- simStandardizedResiduals[,5]*XOMZs+XOMZmu
+
+colnames(simStandardizedResiduals) <- stockList
+
+
+## Combine data for functions
+htMat <- matrix(nrow=nrow(m),ncol=length(stockList))
+ZMat <- matrix(nrow=nrow(m),ncol=length(stockList))
+muVec <- vector(mode='numeric',length(stockList))
+omegaVec <- vector(mode='numeric',length(stockList))
+alpha1Vec <- vector(mode='numeric',length(stockList))
+betaVec <- vector(mode='numeric',length(stockList))
+meanVec <- vector(mode='numeric',length(stockList))
+
+
+for(s in 1:length(stockList)){
+  htMat[,s] <- get(paste(stockList[s],'gfit',sep=''))@h.t
+  ZMat[,s] <- get(paste(stockList[s],'Z',sep=''))
+  muVec[s] <- get(paste(stockList[s],'mu', sep=''))
+  omegaVec[s] <- get(paste(stockList[s],'omega', sep=''))
+  alpha1Vec[s] <- get(paste(stockList[s],'alpha1', sep=''))
+  betaVec[s] <- get(paste(stockList[s],'beta', sep=''))
+  meanVec[s] <- get(paste(stockList[s],'mean', sep=''))
+}
+colnames(htMat) <- stockList
+colnames(ZMat) <- stockList
+names(muVec) <- stockList
+names(omegaVec) <- stockList
+names(alpha1Vec) <- stockList
+names(betaVec) <- stockList
+names(meanVec) <- stockList
+
+## 5 day VaR
+
+# Functions
+GARCH_ht <- function(omega,alpha,beta,hPrevious,zPrevious){
+  epsilon <- sqrt(hPrevious)*zPrevious
+  h <- omega + alpha*epsilon^2 + beta*hPrevious
+  return(h)
+}
+
+MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
+  # MC number simulations
+  n <- N
+  
+  # Create a random residual matrix by sampling from standardized residuals
+  #residMat <- matrix(data=sample(standardResid,n*days,replace = TRUE),ncol = days, nrow=n)
+  residMat <- array(dim = c(n,days,length(stockList)))
+  #for(s in 1:length(stockList)){
+   # residMat[,,s] <- matrix(data=sample(standardResid[,s],n*days,replace = TRUE),ncol = days, nrow=n)
+    # assign(paste(stockList[s],'residMat',sep = ''), matrix(data=sample(standardResid[,s],n*days,replace = TRUE),ncol = days, nrow=n))
+  #}
+  for(j in 1:days){
+      sampleI <- sample(c(1:nrow(standardResid)),n,replace=TRUE)
+      residMat[,j,] <- matrix(data=standardResid[sampleI,],ncol = length(stockList), nrow=n)
+  }
+  
+  
+  # Create a matrix to store ht of simulations
+  #hMat <- matrix(ncol = days,nrow = n)
+  hMat <- array(dim = c(n,days,length(stockList)))
+  
+  # The variance of the first simulated day is the same for all
+  for(s in 1:length(stockList)){
+    hMat[,1,s] <- h[s]
+  }
+  
+  
+  # Apply the GARCH_ht function to get variance for each simulated day, depending on variance and residual of t-1
+  if(days > 1){
+    for(i in 1:length(stockList)){
+      for(j in 2:days){
+        hMat[,j,i] <- GARCH_ht(omega,alpha,beta,hMat[,j-1,i],residMat[,j-1,i])
+      }
+    }
+  }
+  
+  # Simulate daily returns by multiplying the random residuals with the conditional volatility
+  # Check if it runs without loop
+  retMat <- array(dim = c(n,days,length(stockList)))
+  for(s in 1:length(stockList)){
+    for(j in 1:days){
+      for(i in 1:n){
+        retMat[i,j,s] <- residMat[i,j,s]*sqrt(hMat[i,j,s]) + mu[s]
+      }
+    }
+  }
+  # retMat <- residMat*sqrt(hMat) #+ mu
+  
+  # Cumulative log returns of simulated assets over all days
+  cumulativeRet <- matrix(nrow = n,ncol=length(stockList))
+  for(s in 1:length(stockList)){
+    cumulativeRet[,s] <- apply(retMat[,,s],1,sum)
+  }
+  
+  
+  # Portfolio returns
+  # Change to simple returns for mean
+  cumulativeRet <- exp(cumulativeRet)-1
+  portReturns <- apply(cumulativeRet,1,mean)
+  
+  # Change back to log returns
+  portReturns <- log(portReturns+1)
+
+  
+  # Get the VaR of the given risk level with the quantile function
+  VaR <- quantile(portReturns,VaR_alpha,na.rm=TRUE)
+  
+  return(VaR)
+}
+
+MC_VaR_AllDays <- function(htMat,meanVec,omegaVec,alpha1Vec,betaVec,simStandardizedResiduals,days,VaR_alpha){
+  VaR <- c(1:nrow(htMat))
+  VaR <- 0
+  for(i in 1:nrow(htMat)){
+    print(i)
+    VaR[i] <- MC_VaR_OneDay(htMat[i,],muVec,omegaVec,alpha1Vec,betaVec,simStandardizedResiduals,days,VaR_alpha)
+  }
+  return(VaR)
+}
+
+### 5 day VaR
+
+# To test function at just on day
+#VaR <- MC_VaR_OneDay(htMat[1,],muVec,omegaVec,alpha1Vec,betaVec,simStandardizedResiduals,5,0.05)
+
+# This uses standardized residuals instead of copula
+# VaR <- MC_VaR_AllDays(htMat,muVec,omegaVec,alpha1Vec,betaVec,ZMat,5,0.05)
+
+# VaR with Copula standardized residuals
+VaR <- MC_VaR_AllDays(htMat,muVec,omegaVec,alpha1Vec,betaVec,simStandardizedResiduals,5,VaR_alpha)
+
+# 5 Day portfolio returns
+portReturns5days <- matrix(nrow=length(AMD5day$simpleReturns),ncol=length(stockList))
+i = 1
+for(s in stockList){
+  portReturns5days[,i] <- get(paste(s,'5day',sep=''))$simpleReturns
+  i = i+1
+}
+portReturns5days <- apply(portReturns5days,1,mean)
+
+# Check
+plot(portReturns5days)
+lines(VaR[1:length(portReturns5days)],col='green')
+
+hitSeq       <- portReturns5days < VaR[1:length(portReturns5days)]
+numberOfHits <- sum(hitSeq)
+exRatio      <- numberOfHits/length(portReturns5days)
+
+
+# Plot from class
+plot(portReturns5days, type="p")
+lines(VaR[1:length(portReturns5days)], col="red" )
+time = c(1:length(portReturns5days))
+points(time[hitSeq ], portReturns5days[hitSeq], pch="+", col="green")
+
+
+## Kupiec test 
+
+N <- length(portReturns5days)
+num <- (exRatio^numberOfHits)*(1-exRatio)^(N-numberOfHits)
+den <- (VaR_alpha^numberOfHits )  *(1-VaR_alpha)^(N-numberOfHits)
+K   <- 2*log ( num/den )
+
+print("Critical value of Chi2 at 99%")
+print(qchisq(.99, 1))
+print("Kupiec Statistic:")
+print(K)
+
+
+
+
+
+
+
+### Nice plots
+
+# Compare observed and simulated standardized returns
+plot(AMDZ,XOMZ,main='Returns')
+points(sim[,1],sim[,5],col='red')
+legend('bottomright',c('Observed','Simulated'),col=c('black','red'),pch=21)
 
 #### Code below for trial purpose
 
@@ -42,6 +266,14 @@ for(s in stockList){
   plot(get(paste(s,'Z',sep='')),type='l')
 }
 
+# Residuals vs. returns
+
+plot(AMD$logReturns,type = 'l',col='green')
+lines(AMDgfit@residuals)
+
+
+
+### Test GARCH ht function
 
 # TGARCH
 #gfit01  <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=AMD$logReturns, cond.dist=condDist)
@@ -66,6 +298,7 @@ lines(Z,col='green')
 
 # ht 0
 ht0 <- omega/(1-alpha1-beta1)
+ht0 <- 0.2
 epsilon <- sqrt(ht0)*Z[1]
 
 h <- c(NA)
@@ -81,6 +314,8 @@ s <- sqrt(h)
 
 plot(gfit01@sigma.t ,type='l')
 lines(s,col='green')
+
+
 
 # One day VaR
 
@@ -108,7 +343,7 @@ MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
   # Apply the GARCH_ht function to get variance for each simulated day, depending on variance and residual of t-1
   if(days > 1){
     for(j in 2:days){
-      hMat[,j] <- GARCH_ht(omega,alpha,beta,hMat[,j-1],residMat[,j-1])
+      hMat[,j] <- GARCH_ht(omega,alpha,beta,hMat[,j-1],residMat[,j-1])/sqrt(days)
     }
   }
   # Simulate daily returns by multiplying the random residuals with the conditional volatility
@@ -136,7 +371,7 @@ MC_VaR_AllDays <- function(ht,mu,omega,alpha,beta,standardResid,days,VaR_alpha){
 
 # Try 5 day MC
 
-VaR <- MC_VaR_AllDays(gfit01@h.t[1:(length(gfit01@h.t)-1)],mu,omega,alpha1,beta1,Z,1,0.05)*sqrt(5)
+VaR <- MC_VaR_AllDays(gfit01@h.t[1:(length(gfit01@h.t))],mu,omega,alpha1,beta1,Z,1,0.05)*sqrt(5)
 
 plot(AMD5day$logReturns)
 lines(VaR,col='green')
