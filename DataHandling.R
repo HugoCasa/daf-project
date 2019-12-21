@@ -2,11 +2,6 @@
 # The files are taken from Wharton Research Data Services. The data points Adjustment factor and 
 # "Price - Close - Daily" are needed. 
 
-rm(list=ls())
-
-# Number of days ahead the VaR is calculated
-VaR_days <- 5
-
 # List all files in Data folder
 allStocks <- list.files('Data/')
 
@@ -57,6 +52,26 @@ for(s in allStocks){
   
 }
 
+# TODO Check if all stocks have same length and same index
+
+# Create dataframe of the indiviual stock returns
+stock_ret <- matrix(nrow=length(get(stockList[1])$simpleReturns),ncol=length(stockList))
+stock_log <- matrix(nrow=length(get(stockList[1])$logReturns),ncol=length(stockList))
+i = 1
+for(s in stockList){
+  stock_ret[,i] <- get(s)$simpleReturns
+  stock_log[,i] <- get(s)$logReturns
+  i = i+1
+}
+colnames(stock_ret) <- stockList
+colnames(stock_log) <- stockList
+
+index <- as.Date(rownames(get(stockList[1])),"%Y%m%d")
+
+stock_ret = as.data.frame(stock_ret, row.names = index)
+stock_log = as.data.frame(stock_log, row.names = index)
+
+
 
 ## Portfolio returns
 
@@ -79,6 +94,7 @@ pf_log <- exp(pf_ret)-1
 # Remove not needed variables
 for(s in stockList){
   rm(list=paste(s,'nday',sep=''))
+  rm(list=s)
 }
 rm(list=c('df','t','allStocks','fileDir','name','priceAdjusted','s', 'i','logReturns','simpleReturns'))
 
