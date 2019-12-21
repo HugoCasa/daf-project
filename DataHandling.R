@@ -4,6 +4,9 @@
 
 rm(list=ls())
 
+# Number of days ahead the VaR is calculated
+VaR_days <- 5
+
 # List all files in Data folder
 allStocks <- list.files('Data/')
 
@@ -38,22 +41,45 @@ for(s in allStocks){
   # Create a dataframe named after the stock
   assign(name,df)
   
-  ## Same for 5 day returns
+  ## Same for n day returns
   # Get returns
-  logReturns = diff(log(priceAdjusted),lag=5)
-  simpleReturns = priceAdjusted[6:length(priceAdjusted)]/priceAdjusted[1:(length(priceAdjusted)-5)] - 1
+  logReturns = diff(log(priceAdjusted),lag=VaR_days)
+  simpleReturns = priceAdjusted[(VaR_days+1):length(priceAdjusted)]/priceAdjusted[1:(length(priceAdjusted)-(VaR_days))] - 1
   
   # Assign to dataframe
   df <- data.frame(simpleReturns,logReturns)
   colnames(df) <- c('simpleReturns','logReturns')
-  rownames(df) <- t$datadate[6:length(priceAdjusted)]
+  rownames(df) <- t$datadate[(VaR_days+1):length(priceAdjusted)]
   
   # Create a dataframe named after the stock
-  name <- paste(name,'5day',sep='')
+  name <- paste(name,'nday',sep='')
   assign(name,df)
   
 }
 
+
+## Portfolio returns
+
+# n Day portfolio returns
+pf_ret <- matrix(nrow=length(get(paste(stockList[1],'nday',sep=''))$simpleReturns),ncol=length(stockList))
+i = 1
+for(s in stockList){
+  pf_ret[,i] <- get(paste(s,'nday',sep=''))$simpleReturns
+  i = i+1
+}
+
+# Can take n day simple returns to get portfolio returns because they were calculated end - beginning, not 1 day aggregated
+
+# Mean of Assets
+pf_ret <- apply(pf_ret,1,mean)
+
+# Change to log returns
+pf_log <- exp(pf_ret)-1
+
 # Remove not needed variables
+for(s in stockList){
+  rm(list=paste(s,'nday',sep=''))
+}
 rm(list=c('df','t','allStocks','fileDir','name','priceAdjusted','s', 'i','logReturns','simpleReturns'))
+
 
