@@ -1,3 +1,7 @@
+library("copula")
+library("fGarch")
+library("MASS")
+
 rm(list=ls())
 
 ## Parameters
@@ -94,14 +98,6 @@ for(s in 1:stock_n){
 copula_dist <- mvdc(copula=claytonCopula(copula_theta, dim = length(stockList)), margins=copula_margins_list,
                     paramMargins = copula_paramMargins_list)
 
-# Sample all standardized residuals at once from the copula function
-copula_Z <- rMvdc(copula_dist, n=MC_n*VaR_days*100)
-
-# Scale back all standardized residuals
-for(s in 1:stock_n){
-  copula_Z[,s] <- copula_Z[,s]*copula_Z_s[s]+copula_Z_mu[s]
-}  
-
 # Functions
 GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
   epsilon <- sqrt(hPrevious)*zPrevious
@@ -109,39 +105,52 @@ GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
   return(h)
 }
 
-# Matrix to store all residuals from copula
-MC_residuals <- array(dim=c(stock_days,stock_n,VaR_days,MC_n))
 
-# Create array to store ht of simulations
-MC_h <- array(dim=c(stock_days,stock_n,VaR_days,MC_n))
+## For high calculating performance 4 dimensional arrays are used, to reduce the number of loops
+
+# Dimensions: 1: the different stocks, 2: the total days of the model, 3: days of VaR, 4: Monte Carlo simulations for each day
+
+# Draw all random residuals at once with correct dependence between stocks. In array the dimensions are filled consecutively with data.
+# In the residuals matrix the first dimension is the different stocks, so that they can be filled with the correct dependence.
+
+# Normal that this line takes a lot of time
+MC_residuals <- array(as.vector(t(rMvdc(copula_dist, n=MC_n*VaR_days*stock_days))), dim=c(stock_n,stock_days,VaR_days,MC_n))
+
+
+# Scale back all standardized residuals
+for(s in 1:stock_n){
+  MC_residuals[s,,,] <- MC_residuals[s,,,]*copula_Z_s[s]+copula_Z_mu[s]
+}  
+
+## Check for dependence between modeled residuals
+
+# Pairplot library
+library(psych)
+
+# Pairplot
+pairs.panels(t(MC_residuals[,1,1,]))
+
+## Create array to store ht of simulations
+MC_h <- array(dim=c(stock_n,stock_days,VaR_days,MC_n))
 
 # The variance of the first simulated day is the same for all
 for(s in 1:stock_n){
-  MC_h[,s,1,] <- matrix(GARCH_h.t[,s],nrow=stock_days,ncol=MC_n)
-}
-
-# Sample the residuals matrix. Important to keep dependence between different stocks
-for(j in 1:stock_days){
-  print(j)
-  for(i in 1:VaR_days){
-    sampleI <- sample(c(1:nrow(copula_Z)),MC_n,replace=TRUE)
-    MC_residuals[j,,i,] <- matrix(data=copula_Z[sampleI,], nrow=MC_n, ncol = stock_n)
-  }
+  MC_h[s,,1,] <- matrix(GARCH_h.t[,s],nrow=stock_days,ncol=MC_n)
 }
 
 # Apply GARCH function
 for(s in 1:stock_n){
   for(i in 2:VaR_days){
-    MC_h[,s,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[,s,i-1,],MC_residuals[,s,i-1,])
+    MC_h[s,,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[s,,i-1,],MC_residuals[s,,i-1,])
   }
 }
 
-# Simulate returns
+## Simulate returns
 MC_stock_log <- MC_residuals*sqrt(MC_h)
 
 # Add back the mean
 for(s in 1:stock_n){
-  MC_stock_log[,s,,] <- MC_stock_log[,s,,] + stock_log_mean
+  MC_stock_log[s,,,] <- MC_stock_log[s,,,] + stock_log_mean[s]
 }
 
 # Get cumulative returns of the n days
@@ -151,27 +160,28 @@ MC_stock_log <- apply(MC_stock_log,c(1,2,4),sum)
 MC_stock_ret <- exp(MC_stock_log)-1
 
 # Get portfolio returns
-MC_ret <- apply(MC_stock_ret,c(1,3),mean)
+MC_ret <- apply(MC_stock_ret,c(2,3),mean)
+
+# Change back to log returns
+MC_log <- log(MC_ret+1)
 
 # Apply quantile function to get VaR
-VaR <- apply(MC_ret,1,quantile,VaR_alpha)
+VaR <- apply(MC_log,1,quantile,VaR_alpha)
 
 
 
-
-
-
-# Check model
+### Check model
 hitSeq       <- pf_log < VaR[1:length(pf_log)]
 numberOfHits <- sum(hitSeq)
 exRatio      <- numberOfHits/length(pf_log)
 
 
 # Plot from class
-plot(pf_log, type="p")
-lines(VaR[1:length(pf_log)], col="red" )
+index = index[1:length(pf_log)]
+plot(index,pf_log, type="p")
+lines(index,VaR[1:length(pf_log)], col="red" )
 time = c(1:length(pf_log))
-points(time[hitSeq ], pf_log[hitSeq], pch="+", col="green")
+points(index[hitSeq ], pf_log[hitSeq], pch="+", col="green")
 
 
 ## Kupiec test 
