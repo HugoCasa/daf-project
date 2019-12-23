@@ -6,6 +6,9 @@ rm(list=ls())
 
 ## Parameters
 
+# Portfolio directory in Data folder
+pf_path <- 'Data/Portfolio2/'
+
 # Number of days ahead the VaR is calculated
 VaR_days <- 5
 
@@ -13,7 +16,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # Monte Carlo sim
-MC_n <- 1500
+MC_n <- 1000
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -114,12 +117,12 @@ GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
 # In the residuals matrix the first dimension is the different stocks, so that they can be filled with the correct dependence.
 
 # Normal that this line takes a lot of time
-MC_residuals <- array(as.vector(t(rMvdc(copula_dist, n=MC_n*VaR_days*stock_days))), dim=c(stock_n,stock_days,VaR_days,MC_n))
+MC_Z <- array(as.vector(t(rMvdc(copula_dist, n=MC_n*VaR_days*stock_days))), dim=c(stock_n,stock_days,VaR_days,MC_n))
 
 
 # Scale back all standardized residuals
 for(s in 1:stock_n){
-  MC_residuals[s,,,] <- MC_residuals[s,,,]*copula_Z_s[s]+copula_Z_mu[s]
+  MC_Z[s,,,] <- MC_Z[s,,,]*copula_Z_s[s]+copula_Z_mu[s]
 }  
 
 ## Check for dependence between modeled residuals
@@ -128,7 +131,7 @@ for(s in 1:stock_n){
 library(psych)
 
 # Pairplot
-pairs.panels(t(MC_residuals[,1,1,]))
+pairs.panels(t(MC_Z[,1,1,]))
 
 ## Create array to store ht of simulations
 MC_h <- array(dim=c(stock_n,stock_days,VaR_days,MC_n))
@@ -141,12 +144,12 @@ for(s in 1:stock_n){
 # Apply GARCH function
 for(s in 1:stock_n){
   for(i in 2:VaR_days){
-    MC_h[s,,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[s,,i-1,],MC_residuals[s,,i-1,])
+    MC_h[s,,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
   }
 }
 
 ## Simulate returns
-MC_stock_log <- MC_residuals*sqrt(MC_h)
+MC_stock_log <- MC_Z*sqrt(MC_h)
 
 # Add back the mean
 for(s in 1:stock_n){
