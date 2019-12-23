@@ -2,8 +2,8 @@
 # The files are taken from Wharton Research Data Services. The data points Adjustment factor and 
 # "Price - Close - Daily" are needed. 
 
-# List all files in Data folder
-allStocks <- list.files('Data/')
+# List all stocks in path of portfolio
+allStocks <- list.files(pf_path)
 
 # List to store all stock names
 stockList <- c(NA)
@@ -11,8 +11,7 @@ length(stockList) <- length(allStocks)
 i <- 1
 
 for(s in allStocks){
-  
-  fileDir <- paste('Data/',s,sep = '')
+  fileDir <- paste(pf_path,s,sep='')
 
   t <- read.csv(fileDir)
   name <- levels(t$tic)
