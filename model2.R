@@ -13,7 +13,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # Monte Carlo sim
-MC_n <- 1000
+MC_n <- 1500
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -83,7 +83,7 @@ for(s in 1:stock_n){
 # Delete not needed variables
 rm(list='copula_Z_fit')
 
-# Parameters for copula
+# Parameters for copula function
 copula_margins_list <- matrix(data='t',nrow=1,ncol=stock_n)[1,]
 
 copula_paramMargins_list <- vector(mode="list", length = stock_n)
@@ -184,12 +184,22 @@ time = c(1:length(pf_log))
 points(index[hitSeq ], pf_log[hitSeq], pch="+", col="green")
 
 
-## Kupiec test 
+# Kupiec test
+library(Rmpfr)
 
-N <- length(pf_log)
+# Higher precision is needed, otherwise numerator and denumerator are treated as 0
+N <- mpfr(length(pf_log),precBits= 128)
+exRatio <- mpfr(exRatio,precBits = 128)
+numberOfHits <- mpfr(numberOfHits,precBits = 128)
+VaR_alpha <- mpfr(VaR_alpha,precBits = 128)
 num <- (exRatio^numberOfHits)*(1-exRatio)^(N-numberOfHits)
-den <- (VaR_alpha^numberOfHits )  *(1-VaR_alpha)^(N-numberOfHits)
-K   <- 2*log(num/den)
+den <- (VaR_alpha^numberOfHits )*(1-VaR_alpha)^(N-numberOfHits)
+K   <- as.numeric(2*log(num/den))
+VaR_alpha <- as.numeric(VaR_alpha)
+p <- 0.99
 
-
-
+if(K < qchisq(p,1)){
+  print("VaR model is accurate at 99% level")
+}else{
+  print("VaR model is not accurate at 99% level")
+}
