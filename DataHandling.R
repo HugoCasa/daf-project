@@ -88,7 +88,7 @@ for(s in stockList){
 pf_ret <- apply(pf_ret,1,mean)
 
 # Change to log returns
-pf_log <- exp(pf_ret)-1
+pf_log <- log(pf_ret+1)
 
 # Remove not needed variables
 for(s in stockList){
