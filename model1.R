@@ -1,153 +1,112 @@
-
+rm(list=ls())
 
 # library for dataframe manipulation
 library(dplyr)
 library(fGarch)
 
-N = nrow(get(stockList[1]))
-M = length(stockList)
-returns = as.data.frame(mget(stockList))
-returns = select(returns, -contains("logReturns"))
-colnames(returns) <- stockList
+## Parameters
 
+# Portfolio directory in Data folder
+pf_path <- 'Data/Portfolio1/'
 
-ret_mat = matrix(as.numeric(unlist(returns)), nrow=N, ncol=M)
+# Number of days ahead the VaR is calculated
+VaR_days <- 5
 
-pf_ret = apply(ret_mat, 1, mean)
-pf_log = log(pf_ret + 1)
+# VaR alpha
+VaR_alpha <- 0.05
 
-pf_log_5 = vector("numeric", N-4)
-for (i in 1:(N-4)) {
-  pf_log_5[i] = sum(pf_log[i:(i+4)])
-}
+# Monte Carlo sim
+MC_n <- 1000
 
-plot(pf_log)
-plot(pf_log_5)
+# Conditional distribution GARCH: Students t distribution
+GARCHcondDist <- "std"
 
-condDist <- 'std'
-gfit01  <- garchFit(formula = ~ garch(1, 1), data=pf_log, cond.dist=condDist)
+## Run data handling file 
+source('DataHandling.R')
 
+# Precalculate some numbers for higher calculation performance
+pf_days <- length(pf_log)
 
-alpha = 0.05
+## Get mean returns
+pf_log_mean <- mean(pf_log)
 
-sqrtht <- gfit01@sigma.t
-
-nu     <- gfit01@fit$coef["shape"]
-VaR    <- sqrtht*qt(alpha, nu)/sqrt(nu/(nu-2))
+# Deduct the mean from every stock, for standardized news process in GARCH
+pf_log_mean0 <- pf_log - pf_log_mean
 
 
 plot(pf_log)
-lines(VaR, col='red')
-hit = pf_log<VaR
 
-nb_hits = sum(hit)
-exc = nb_hits/length(hit)
-var_mean = mean(VaR)
-
-###### 5 days VaR
-
-
-ind <- function(eps) {
-  res <- vector("numeric",length(eps))
-  for (i in 1:length(eps)) {
-    res[i] <- min(eps[i],0)
-  }
-  print(res)
-  return(res)
-}
+# garch
+gfit01  <- garchFit(formula = ~ garch(1, 1), data=pf_log_mean0, cond.dist=GARCHcondDist)
+# tgarch
+#gfit01 <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=pf_log_mean0, cond.dist=GARCHcondDist)
 
 # Functions
-GARCH_ht <- function(omega,alpha,beta,gamma, hPrevious,zPrevious, tg = FALSE){
-  
+
+# GARCH
+
+GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
   epsilon <- sqrt(hPrevious)*zPrevious
-  if (gamma == 0) {
-    h <- omega + alpha*epsilon^2 + beta*hPrevious
-    return(h)
-  } else {
-    h <- omega + alpha*epsilon^2 + beta*hPrevious + gamma*ind(epsilon)^2
-    #print(h)
-    return(h)
-  }
-}
-
-MC_VaR_OneDay <- function(h,mu,omega,alpha,beta,gamma,standardResid,days,VaR_alpha){
-  # MC number simulations
-  n <- 1000
-  
-  # Create a random residual matrix by sampling from standardized residuals
-  residMat <- matrix(data=sample(standardResid,n*days,replace = TRUE),ncol = days, nrow=n)
-  
-  # Create a matrix to store ht of simulations
-  hMat <- matrix(ncol = days,nrow = n)
-  
-  # The variance of the first simulated day is the same for all
-  hMat[,1] <- h
-  
-  # Apply the GARCH_ht function to get variance for each simulated day, depending on variance and residual of t-1
-  if(days > 1){
-    for(j in 2:days){
-      hMat[,j] <- GARCH_ht(omega,alpha,beta,gamma, hMat[,j-1],residMat[,j-1], tg)
-    }
-  }
-  # Simulate daily returns by multiplying the random residuals with the conditional volatility
-  retMat <- residMat*sqrt(hMat) + mu
-  
-  # Cumulative log returns of all days
-  retMat <- rowSums(retMat)
-  
-  # Get the VaR of the given risk level with the quantile function
-  VaR <- quantile(retMat,VaR_alpha)
-  
-  return(VaR)
-}
-
-
-
-MC_VaR_AllDays <- function(ht,mu,omega,alpha,beta,gamma = 0,standardResid,days,VaR_alpha){
-  h <- c(1:length(ht))
-  h <- 0
-  for(i in 1:length(ht)){
-    h[i] <- MC_VaR_OneDay(ht[i],mu,omega,alpha,beta,gamma,standardResid,days,VaR_alpha)
-  }
+  h <- omega + alpha*epsilon^2 + beta*hPrevious
   return(h)
 }
 
-# Try 5 day MC
 
+# TGARCH 
+
+TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
+  epsilon <- sqrt(hPrevious)*zPrevious
+  h <- omega + alpha*epsilon^2 + gamma*pmin(epsilon,0)^2 +beta*hPrevious
+  return(h)
+}
 
 
 mu <- coef(gfit01)[1]
 omega <- coef(gfit01)[2]
-alpha1 <- coef(gfit01)[3]
-beta1 <- coef(gfit01)[4]
-Z <- (gfit01@residuals-mu)/gfit01@sigma.t 
+alpha <- coef(gfit01)[3]
 
-VaR5 <- MC_VaR_AllDays(gfit01@h.t,mu,omega,alpha1,beta1,0,Z,5,0.05)
-#retMat <- MC_VaR_OneDay(gfit01@h.t[1],mu,omega,alpha1,beta1,Z,5,0.05)
+#garch
+beta <- coef(gfit01)[4]
+#tgarch
+#gamma <- coef(gfit01)[4]
+#beta <- coef(gfit01)[5]
 
-plot(pf_log_5)
-lines(VaR5,col='green')
+h.t <- gfit01@h.t
+Z <- gfit01@residuals/gfit01@sigma.t 
 
 
-hitSeq       <-  pf_log_5 < VaR5[1:(length(VaR5)-4)]
+MC_Z <- array(sample(Z,pf_days*VaR_days*MC_n,replace = TRUE), dim=c(pf_days,VaR_days,MC_n))
+
+MC_h <- array(dim=c(pf_days,VaR_days,MC_n))
+
+MC_h[,1,] <- matrix(h.t,nrow=pf_days,ncol=MC_n)
+
+for(i in 2:VaR_days){
+  # garch
+  MC_h[,i,] <- GARCH_ht_function(omega,alpha,beta,MC_h[,i-1,],MC_Z[,i-1,])
+  # tgarch
+  #MC_h[,i,] <- TGARCH_ht_function(omega,alpha,beta,gamma,MC_h[,i-1,],MC_Z[,i-1,])
+}
+
+MC_log <- MC_Z*sqrt(MC_h)
+
+# Add back the mean to every stock
+MC_log <- MC_log + pf_log_mean
+
+# Get cumulative returns of the n days
+MC_log <- apply(MC_log,c(1,3),sum)
+
+
+# Apply quantile function to get VaR
+VaR <- apply(MC_log,1,quantile,VaR_alpha)
+
+
+
+### Check model
+hitSeq       <- pf_log_nday < VaR[1:length(pf_log_nday)]
 numberOfHits <- sum(hitSeq)
-exRatio      <- numberOfHits/length(pf_log_5)
+exRatio      <- numberOfHits/length(pf_log_nday)
 
-
-### TGARCH
-
-gfit02 <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=pf_log, cond.dist=condDist)
-
-mu_tg <- coef(gfit02)[1]
-omega_tg <- coef(gfit02)[2]
-alpha1_tg <- coef(gfit02)[3]
-gamma1_tg <- coef(gfit02)[4]
-beta1_tg <- coef(gfit02)[5]
-Z_tg <- (gfit02@residuals-mu_tg)/gfit02@sigma.t 
-
-
-VaR5_tg <- MC_VaR_AllDays(gfit02@h.t,mu_tg,omega_tg,alpha1_tg,beta1_tg,gamma1_tg,Z_tg,5,0.05)
-
-
-
+plot(pf_log_nday)
+lines(VaR,col='green')
 
