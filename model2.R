@@ -7,7 +7,8 @@ rm(list=ls())
 ## Parameters
 
 # Portfolio directory in Data folder
-pf_path <- 'Data/Portfolio2/'
+pf_path <- 'Data/Portfolio1/'
+#pf_path <- 'Data/Portfolio2/'
 
 # Number of days ahead the VaR is calculated
 VaR_days <- 5
