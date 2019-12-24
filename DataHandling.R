@@ -74,21 +74,24 @@ stock_log = as.data.frame(stock_log, row.names = index)
 
 ## Portfolio returns
 
+pf_ret <- as.numeric(apply(stock_ret,1,mean))
+pf_log <- log(pf_ret+1)
+
 # n Day portfolio returns
-pf_ret <- matrix(nrow=length(get(paste(stockList[1],'nday',sep=''))$simpleReturns),ncol=length(stockList))
+pf_ret_nday <- matrix(nrow=length(get(paste(stockList[1],'nday',sep=''))$simpleReturns),ncol=length(stockList))
 i = 1
 for(s in stockList){
-  pf_ret[,i] <- get(paste(s,'nday',sep=''))$simpleReturns
+  pf_ret_nday[,i] <- get(paste(s,'nday',sep=''))$simpleReturns
   i = i+1
 }
 
 # Can take n day simple returns to get portfolio returns because they were calculated end - beginning, not 1 day aggregated
 
 # Mean of Assets
-pf_ret <- apply(pf_ret,1,mean)
+pf_ret_nday <- apply(pf_ret_nday,1,mean)
 
 # Change to log returns
-pf_log <- log(pf_ret+1)
+pf_log_nday <- log(pf_ret_nday+1)
 
 # Remove not needed variables
 for(s in stockList){
