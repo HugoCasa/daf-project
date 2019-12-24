@@ -11,7 +11,7 @@ pf_path <- 'Data/Portfolio1/'
 #pf_path <- 'Data/Portfolio2/'
 
 # Number of days ahead the VaR is calculated
-VaR_days <- 5
+VaR_days <- 10
 
 # VaR alpha
 VaR_alpha <- 0.05
@@ -28,7 +28,7 @@ source('DataHandling.R')
 # Precalculate some numbers for higher calculation performance
 stock_n <- length(stockList)
 stock_days <- nrow(stock_log)
-pf_days <- length(pf_log)
+pf_days <- length(pf_ret_nday)
 
 ## Get mean returns
 stock_log_mean <- apply(stock_log,2,mean)
@@ -175,24 +175,24 @@ VaR <- apply(MC_log,1,quantile,VaR_alpha)
 
 
 ### Check model
-hitSeq       <- pf_log < VaR[1:length(pf_log)]
+hitSeq       <- pf_ret_nday < VaR[1:length(pf_ret_nday)]
 numberOfHits <- sum(hitSeq)
-exRatio      <- numberOfHits/length(pf_log)
+exRatio      <- numberOfHits/length(pf_ret_nday)
 
 
 # Plot from class
-index = index[1:length(pf_log)]
-plot(index,pf_log, type="p")
-lines(index,VaR[1:length(pf_log)], col="red" )
-time = c(1:length(pf_log))
-points(index[hitSeq ], pf_log[hitSeq], pch="+", col="green")
+index = index[1:length(pf_ret_nday)]
+plot(index,pf_ret_nday, type="p")
+lines(index,VaR[1:length(pf_ret_nday)], col="red" )
+time = c(1:length(pf_ret_nday))
+points(index[hitSeq ], pf_ret_nday[hitSeq], pch="+", col="green")
 
 
 # Kupiec test
 library(Rmpfr)
 
 # Higher precision is needed, otherwise numerator and denumerator are treated as 0
-N <- mpfr(length(pf_log),precBits= 128)
+N <- mpfr(length(pf_ret_nday),precBits= 128)
 exRatio <- mpfr(exRatio,precBits = 128)
 numberOfHits <- mpfr(numberOfHits,precBits = 128)
 VaR_alpha <- mpfr(VaR_alpha,precBits = 128)
