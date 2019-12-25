@@ -16,7 +16,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # Monte Carlo sim
-MC_n <- 10000
+MC_n <- 1000
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -37,7 +37,7 @@ pf_log_mean0 <- pf_log - pf_log_mean
 plot(pf_log)
 
 # garch
-# gfit01  <- garchFit(formula = ~ garch(1, 1), data=pf_log_mean0, cond.dist=GARCHcondDist)
+#gfit01  <- garchFit(formula = ~ garch(1, 1), data=pf_log_mean0, cond.dist=GARCHcondDist)
 # tgarch
 gfit01 <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=pf_log_mean0, cond.dist=GARCHcondDist)
 
@@ -66,7 +66,7 @@ alpha <- coef(gfit01)["alpha1"]
 beta <- coef(gfit01)["beta1"]
 
 #tgarch
-#gamma <- coef(gfit01)["gamma1"]
+gamma <- coef(gfit01)["gamma1"]
 
 h.t <- gfit01@h.t
 Z <- gfit01@residuals/gfit01@sigma.t 
@@ -78,8 +78,8 @@ Z_s <- Z_fit$estimate[["s"]]
 Z_df <- Z_fit$estimate[["df"]]
 
 
-# hist(pf_ret,breaks=80,main='Cree returns',freq=F,density=30,col='cyan',ylim=c(0,20),xlim=c(-0.2,0.3))
-# lines(seq(-0.5,0.5,0.001),dt((seq(-0.5,0.5,0.001)-Z_mu)/Z_s,Z_df)/Z_s,col='blue',lwd=2)
+hist(Z,breaks=80,main='Standardised Residuals',freq=F,col='cyan')
+lines(seq(-10,10,0.01),dt((seq(-10,10,0.01)-Z_mu)/Z_s,Z_df)/Z_s,col='blue',lwd=2)
 # legend('topright',c('Fitted normal', 'Fitted t-distribution'),col=c('red', 'blue'),lwd=2)
 
 
@@ -94,9 +94,9 @@ MC_h[,1,] <- matrix(h.t,nrow=pf_days,ncol=MC_n)
 
 for(i in 2:VaR_days){
   # garch
-  # MC_h[,i,] <- GARCH_ht_function(omega,alpha,beta,MC_h[,i-1,],MC_Z[,i-1,])
+  #MC_h[,i,] <- GARCH_ht_function(omega,alpha,beta,MC_h[,i-1,],MC_Z[,i-1,])
   # tgarch
-  MC_h[,i,] <- TGARCH_ht_function(omega,alpha,beta,gamma,MC_h[,i-1,],MC_Z[,i-1,])
+   MC_h[,i,] <- TGARCH_ht_function(omega,alpha,beta,gamma,MC_h[,i-1,],MC_Z[,i-1,])
 }
 
 MC_log <- MC_Z*sqrt(MC_h)
