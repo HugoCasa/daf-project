@@ -16,7 +16,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # Monte Carlo sim
-MC_n <- 1000
+MC_n <- 10000
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -37,9 +37,9 @@ pf_log_mean0 <- pf_log - pf_log_mean
 plot(pf_log)
 
 # garch
-gfit01  <- garchFit(formula = ~ garch(1, 1), data=pf_log_mean0, cond.dist=GARCHcondDist)
+# gfit01  <- garchFit(formula = ~ garch(1, 1), data=pf_log_mean0, cond.dist=GARCHcondDist)
 # tgarch
-#gfit01 <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=pf_log_mean0, cond.dist=GARCHcondDist)
+gfit01 <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=pf_log_mean0, cond.dist=GARCHcondDist)
 
 # Functions
 
@@ -55,8 +55,7 @@ GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
 # TGARCH 
 
 TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
-  epsilon <- sqrt(hPrevious)*zPrevious
-  h <- omega + alpha*epsilon^2 + gamma*pmin(epsilon,0)^2 +beta*hPrevious
+  h <- omega + alpha*hPrevious*(abs(zPrevious)-gamma*zPrevious)^2 + beta*hPrevious
   return(h)
 }
 
@@ -66,10 +65,10 @@ omega <- coef(gfit01)[2]
 alpha <- coef(gfit01)[3]
 
 #garch
-beta <- coef(gfit01)[4]
+#beta <- coef(gfit01)[4]
 #tgarch
-#gamma <- coef(gfit01)[4]
-#beta <- coef(gfit01)[5]
+gamma <- coef(gfit01)[4]
+beta <- coef(gfit01)[5]
 
 h.t <- gfit01@h.t
 Z <- gfit01@residuals/gfit01@sigma.t 
@@ -83,9 +82,9 @@ MC_h[,1,] <- matrix(h.t,nrow=pf_days,ncol=MC_n)
 
 for(i in 2:VaR_days){
   # garch
-  MC_h[,i,] <- GARCH_ht_function(omega,alpha,beta,MC_h[,i-1,],MC_Z[,i-1,])
+  # MC_h[,i,] <- GARCH_ht_function(omega,alpha,beta,MC_h[,i-1,],MC_Z[,i-1,])
   # tgarch
-  #MC_h[,i,] <- TGARCH_ht_function(omega,alpha,beta,gamma,MC_h[,i-1,],MC_Z[,i-1,])
+  MC_h[,i,] <- TGARCH_ht_function(omega,alpha,beta,gamma,MC_h[,i-1,],MC_Z[,i-1,])
 }
 
 MC_log <- MC_Z*sqrt(MC_h)
