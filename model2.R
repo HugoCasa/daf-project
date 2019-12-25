@@ -17,7 +17,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # Monte Carlo sim
-MC_n <- 1000
+MC_n <- 500
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -28,7 +28,7 @@ source('DataHandling.R')
 # Precalculate some numbers for higher calculation performance
 stock_n <- length(stockList)
 stock_days <- nrow(stock_log)
-pf_days <- length(pf_log)
+pf_days <- length(pf_ret_nday)
 
 ## Get mean returns
 stock_log_mean <- apply(stock_log,2,mean)
@@ -60,7 +60,7 @@ for(s in 1:stock_n){
 GARCH_Z <- GARCH_residuals/GARCH_sigma.t
 
 # Delete not needed variables
-rm(list='GARCH')
+# rm(list='GARCH')
 
 ##### Copula
 
@@ -175,24 +175,24 @@ VaR <- apply(MC_log,1,quantile,VaR_alpha)
 
 
 ### Check model
-hitSeq       <- pf_log < VaR[1:length(pf_log)]
+hitSeq       <- pf_ret_nday < VaR[1:length(pf_ret_nday)]
 numberOfHits <- sum(hitSeq)
-exRatio      <- numberOfHits/length(pf_log)
+exRatio      <- numberOfHits/length(pf_ret_nday)
 
 
 # Plot from class
-index = index[1:length(pf_log)]
-plot(index,pf_log, type="p")
-lines(index,VaR[1:length(pf_log)], col="red" )
-time = c(1:length(pf_log))
-points(index[hitSeq ], pf_log[hitSeq], pch="+", col="green")
+index = index[1:length(pf_ret_nday)]
+plot(index,pf_ret_nday, type="p")
+lines(index,VaR[1:length(pf_ret_nday)], col="red" )
+time = c(1:length(pf_ret_nday))
+points(index[hitSeq ], pf_ret_nday[hitSeq], pch="+", col="green")
 
 
 # Kupiec test
 library(Rmpfr)
 
 # Higher precision is needed, otherwise numerator and denumerator are treated as 0
-N <- mpfr(length(pf_log),precBits= 128)
+N <- mpfr(length(pf_ret_nday),precBits= 128)
 exRatio <- mpfr(exRatio,precBits = 128)
 numberOfHits <- mpfr(numberOfHits,precBits = 128)
 VaR_alpha <- mpfr(VaR_alpha,precBits = 128)
@@ -207,3 +207,63 @@ if(K < qchisq(p,1)){
 }else{
   print("VaR model is not accurate at 99% level")
 }
+
+
+
+# GARCH test
+# Functions
+GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
+  epsilon <- sqrt(hPrevious)*zPrevious
+  h <- omega + alpha*epsilon^2 + beta*hPrevious
+  return(h)
+}
+
+
+GARCH <- garchFit(formula = ~ garch(1, 1), data=stock_log_mean0[,s], cond.dist=GARCHcondDist)
+plot(GARCH@sigma.t,type='l')
+test_h.t <- vector(mode = "numeric", length = length(GARCH@h.t))
+h <- 0.02^2
+test_h.t[1] <- h
+
+
+GARCH_mu <- coef(GARCH)[1]
+GARCH_omega <- coef(GARCH)[2]
+GARCH_alpha <- coef(GARCH)[3]
+GARCH_beta <- coef(GARCH)[4]
+z <- GARCH@residuals/GARCH@sigma.t
+
+for(i in 2:length(test_h.t)){
+  test_h.t[i] <- GARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,test_h.t[i-1],z[i-1])
+}
+lines(sqrt(test_h.t),col='green')
+
+# TGARCH test
+GARCH <- garchFit(formula = ~ garch(1, 1), delta = 2, include.delta= FALSE, leverage = TRUE, data=stock_log_mean0[,5], cond.dist=GARCHcondDist)
+lines(GARCH@sigma.t,col='green')
+plot(GARCH@h.t,type='l')
+test_h.t <- vector(mode = "numeric", length = length(GARCH@h.t))
+h <- 0.02^2
+test_h.t[1] <- h
+
+## Correct GJR GARCH function
+TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
+  h <- omega + alpha*hPrevious*(abs(zPrevious)-gamma*zPrevious)^2 + beta*hPrevious
+  return(h)
+}
+
+GARCH_mu <- coef(GARCH)[1]
+GARCH_omega <- coef(GARCH)[2]
+GARCH_alpha <- coef(GARCH)[3]
+GARCH_gamma <- coef(GARCH)[4]
+GARCH_beta <- coef(GARCH)[5]
+
+z <- GARCH@residuals/GARCH@sigma.t
+
+for(i in 2:length(test_h.t)){
+  test_h.t[i] <- TGARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,GARCH_gamma,test_h.t[i-1],z[i-1])
+}
+lines(test_h.t,col='green')
+
+
+
+
