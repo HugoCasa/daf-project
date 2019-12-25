@@ -11,13 +11,13 @@ pf_path <- 'Data/Portfolio1/'
 #pf_path <- 'Data/Portfolio2/'
 
 # Number of days ahead the VaR is calculated
-VaR_days <- 10
+VaR_days <- 5
 
 # VaR alpha
 VaR_alpha <- 0.05
 
 # Monte Carlo sim
-MC_n <- 1000
+MC_n <- 500
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -60,7 +60,7 @@ for(s in 1:stock_n){
 GARCH_Z <- GARCH_residuals/GARCH_sigma.t
 
 # Delete not needed variables
-rm(list='GARCH')
+# rm(list='GARCH')
 
 ##### Copula
 
@@ -207,3 +207,56 @@ if(K < qchisq(p,1)){
 }else{
   print("VaR model is not accurate at 99% level")
 }
+
+
+
+# GARCH test
+GARCH <- garchFit(formula = ~ garch(1, 1), data=stock_log_mean0[,s], cond.dist=GARCHcondDist)
+plot(GARCH@sigma.t,type='l')
+test_h.t <- vector(mode = "numeric", length = length(GARCH@h.t))
+h <- 0.02^2
+test_h.t[1] <- h
+
+
+GARCH_mu <- coef(GARCH)[1]
+GARCH_omega <- coef(GARCH)[2]
+GARCH_alpha <- coef(GARCH)[3]
+GARCH_beta <- coef(GARCH)[4]
+z <- GARCH@residuals/GARCH@sigma.t
+
+for(i in 2:length(test_h.t)){
+  test_h.t[i] <- GARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,test_h.t[i-1],z[i])
+}
+lines(sqrt(test_h.t),col='green')
+
+# TGARCH test
+GARCH <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=stock_log_mean0[,5], cond.dist=GARCHcondDist)
+plot(GARCH@sigma.t,type='l')
+test_h.t <- vector(mode = "numeric", length = length(GARCH@h.t))
+h <- 0.01^2
+test_h.t[1] <- h
+
+
+TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
+  epsilon <- sqrt(hPrevious)*zPrevious
+  h <- omega + alpha*epsilon^2 + gamma*pmin(epsilon,0)^2 +beta*hPrevious
+  return(h)
+}
+
+GARCH_mu <- coef(GARCH)[1]
+GARCH_omega <- coef(GARCH)[2]
+GARCH_alpha <- coef(GARCH)[3]
+GARCH_gamma <- coef(GARCH)[4]
+GARCH_beta <- coef(GARCH)[5]
+
+z <- GARCH@residuals/GARCH@sigma.t
+
+for(i in 2:length(test_h.t)){
+  test_h.t[i] <- TGARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,GARCH_gamma,test_h.t[i-1],z[i])
+}
+lines(sqrt(test_h.t),col='green')
+
+unconditionalVariance <- GARCH_omega/(1-GARCH_alpha-0.5*GARCH_gamma-GARCH_beta)
+
+
+
