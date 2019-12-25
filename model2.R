@@ -211,6 +211,14 @@ if(K < qchisq(p,1)){
 
 
 # GARCH test
+# Functions
+GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
+  epsilon <- sqrt(hPrevious)*zPrevious
+  h <- omega + alpha*epsilon^2 + beta*hPrevious
+  return(h)
+}
+
+
 GARCH <- garchFit(formula = ~ garch(1, 1), data=stock_log_mean0[,s], cond.dist=GARCHcondDist)
 plot(GARCH@sigma.t,type='l')
 test_h.t <- vector(mode = "numeric", length = length(GARCH@h.t))
@@ -225,21 +233,21 @@ GARCH_beta <- coef(GARCH)[4]
 z <- GARCH@residuals/GARCH@sigma.t
 
 for(i in 2:length(test_h.t)){
-  test_h.t[i] <- GARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,test_h.t[i-1],z[i])
+  test_h.t[i] <- GARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,test_h.t[i-1],z[i-1])
 }
 lines(sqrt(test_h.t),col='green')
 
 # TGARCH test
-GARCH <- garchFit(formula = ~ garch(1, 1), delta =2, leverage = TRUE, data=stock_log_mean0[,5], cond.dist=GARCHcondDist)
-plot(GARCH@sigma.t,type='l')
+GARCH <- garchFit(formula = ~ garch(1, 1), delta = 2, include.delta= FALSE, leverage = TRUE, data=stock_log_mean0[,5], cond.dist=GARCHcondDist)
+lines(GARCH@sigma.t,col='green')
+plot(GARCH@h.t,type='l')
 test_h.t <- vector(mode = "numeric", length = length(GARCH@h.t))
-h <- 0.01^2
+h <- 0.02^2
 test_h.t[1] <- h
 
-
+## Correct GJR GARCH function
 TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
-  epsilon <- sqrt(hPrevious)*zPrevious
-  h <- omega + alpha*epsilon^2 + gamma*pmin(epsilon,0)^2 +beta*hPrevious
+  h <- omega + alpha*hPrevious*(abs(zPrevious)-gamma*zPrevious)^2 + beta*hPrevious
   return(h)
 }
 
@@ -252,11 +260,10 @@ GARCH_beta <- coef(GARCH)[5]
 z <- GARCH@residuals/GARCH@sigma.t
 
 for(i in 2:length(test_h.t)){
-  test_h.t[i] <- TGARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,GARCH_gamma,test_h.t[i-1],z[i])
+  test_h.t[i] <- TGARCH_ht_function(GARCH_omega,GARCH_alpha,GARCH_beta,GARCH_gamma,test_h.t[i-1],z[i-1])
 }
-lines(sqrt(test_h.t),col='green')
+lines(test_h.t,col='green')
 
-unconditionalVariance <- GARCH_omega/(1-GARCH_alpha-0.5*GARCH_gamma-GARCH_beta)
 
 
 
