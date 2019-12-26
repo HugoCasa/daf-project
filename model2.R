@@ -19,6 +19,10 @@ VaR_alpha <- 0.05
 # Monte Carlo sim
 MC_n <- 500
 
+# GARCH model
+#GARCH_model <- 'GARCH'
+GARCH_model <- 'TGARCH'
+
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
 
@@ -41,26 +45,47 @@ GARCH_mu <- vector(mode = "list", length = stock_n)
 GARCH_omega <- vector(mode = "list", length = stock_n)
 GARCH_alpha <- vector(mode = "list", length = stock_n)
 GARCH_beta <- vector(mode = "list", length = stock_n)
+GARCH_gamma <- vector(mode = "list", length = stock_n)
 GARCH_residuals <- matrix(nrow = stock_days,ncol = stock_n)
 GARCH_h.t <- matrix(nrow = stock_days,ncol = stock_n)
 GARCH_sigma.t <- matrix(nrow = stock_days,ncol = stock_n)
 GARCH_Z <- matrix(nrow = stock_days,ncol = stock_n)
 
-for(s in 1:stock_n){
-  GARCH <- garchFit(formula = ~ garch(1, 1), data=stock_log_mean0[,s], cond.dist=GARCHcondDist)
-  GARCH_mu[s] <- coef(GARCH)[1]
-  GARCH_omega[s] <- coef(GARCH)[2]
-  GARCH_alpha[s] <- coef(GARCH)[3]
-  GARCH_beta[s] <- coef(GARCH)[4]
-  GARCH_residuals[,s] <- GARCH@residuals
-  GARCH_h.t[,s] <- GARCH@h.t
-  GARCH_sigma.t[,s] <- GARCH@sigma.t
+
+if(GARCH_model == 'GARCH'){
+  for(s in 1:stock_n){
+    GARCH <- garchFit(formula = ~ garch(1, 1), data=stock_log_mean0[,s], cond.dist=GARCHcondDist)
+    GARCH_mu[s] <- coef(GARCH)[1]
+    GARCH_omega[s] <- coef(GARCH)[2]
+    GARCH_alpha[s] <- coef(GARCH)[3]
+    GARCH_beta[s] <- coef(GARCH)[4]
+    GARCH_residuals[,s] <- GARCH@residuals
+    GARCH_h.t[,s] <- GARCH@h.t
+    GARCH_sigma.t[,s] <- GARCH@sigma.t
+  }
+  GARCH_Z <- GARCH_residuals/GARCH_sigma.t
+}
+if(GARCH_model == 'TGARCH'){
+  for(s in 1:stock_n){
+    GARCH <- garchFit(formula = ~ garch(1, 1), delta = 2, include.delta= FALSE, leverage = TRUE, data=stock_log_mean0[,s], cond.dist=GARCHcondDist)
+    GARCH_mu[s] <- coef(GARCH)[1]
+    GARCH_omega[s] <- coef(GARCH)[2]
+    GARCH_alpha[s] <- coef(GARCH)[3]
+    GARCH_gamma[s] <- coef(GARCH)[4]
+    GARCH_beta[s] <- coef(GARCH)[5]
+    GARCH_residuals[,s] <- GARCH@residuals
+    GARCH_h.t[,s] <- GARCH@h.t
+    GARCH_sigma.t[,s] <- GARCH@sigma.t
+  }
+  GARCH_Z <- GARCH_residuals/GARCH_sigma.t
 }
 
-GARCH_Z <- GARCH_residuals/GARCH_sigma.t
+
+
+
 
 # Delete not needed variables
-# rm(list='GARCH')
+rm(list='GARCH')
 
 ##### Copula
 
@@ -102,10 +127,18 @@ for(s in 1:stock_n){
 copula_dist <- mvdc(copula=claytonCopula(copula_theta, dim = length(stockList)), margins=copula_margins_list,
                     paramMargins = copula_paramMargins_list)
 
-# Functions
+## Functions
+
+# GARCH
 GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
   epsilon <- sqrt(hPrevious)*zPrevious
   h <- omega + alpha*epsilon^2 + beta*hPrevious
+  return(h)
+}
+
+# GJR GARCH as special version of fGARCH 
+TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
+  h <- omega + alpha*hPrevious*(abs(zPrevious)-gamma*zPrevious)^2 + beta*hPrevious
   return(h)
 }
 
@@ -143,11 +176,21 @@ for(s in 1:stock_n){
 }
 
 # Apply GARCH function
-for(s in 1:stock_n){
-  for(i in 2:VaR_days){
-    MC_h[s,,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
+if(GARCH_model == 'GARCH'){
+  for(s in 1:stock_n){
+    for(i in 2:VaR_days){
+      MC_h[s,,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
+    }
   }
 }
+if(GARCH_model == 'TGARCH'){
+  for(s in 1:stock_n){
+    for(i in 2:VaR_days){
+      MC_h[s,,i,] <- TGARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],GARCH_gamma[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
+    }
+  }
+}
+
 
 ## Simulate returns
 MC_stock_log <- MC_Z*sqrt(MC_h)
