@@ -1,45 +1,45 @@
 ## Libraries
 
-library("copula")
-library("fGarch")
-library("MASS")
-library("psych")
-library("Rmpfr")
-
-rm(list=ls())
-
-# Record start time
-time_start <- Sys.time()
-
-# ================================================================================================
-## Parameters
-
-# Portfolio number (1: 5 stocks, 2: 10 stocks)
-pf_n <- 1
-
-# Number of days ahead the VaR is calculated
-VaR_days <- 5
-
-# VaR alpha
-VaR_alpha <- 0.05
-
-# Monte Carlo simulation number
-MC_n <- 500
-
-# GARCH model
-#GARCH_model <- 'GARCH'
-GARCH_model <- 'TGARCH'
-
-# Conditional distribution GARCH: Students t distribution
-GARCHcondDist <- "std"
-
-#=================================================================================================
-## Data handling
-
-pf_path <- paste('Data/Portfolio',toString(pf_n),'/',sep='')
-
-# Run data handling file 
-source('DataHandling.R')
+# library("copula")
+# library("fGarch")
+# library("MASS")
+# library("psych")
+# library("Rmpfr")
+# 
+# rm(list=ls())
+# 
+# # Record start time
+# time_start <- Sys.time()
+# 
+# # ================================================================================================
+# ## Parameters
+# 
+# # Portfolio number (1: 5 stocks, 2: 10 stocks)
+# pf_n <- 1
+# 
+# # Number of days ahead the VaR is calculated
+# VaR_days <- 5
+# 
+# # VaR alpha
+# VaR_alpha <- 0.05
+# 
+# # Monte Carlo simulation number
+# MC_n <- 500
+# 
+# # GARCH model
+# #GARCH_model <- 'GARCH'
+# GARCH_model <- 'TGARCH'
+# 
+# # Conditional distribution GARCH: Students t distribution
+# GARCHcondDist <- "std"
+# 
+# #=================================================================================================
+# ## Data handling
+# 
+# pf_path <- paste('Data/Portfolio',toString(pf_n),'/',sep='')
+# 
+# # Run data handling file 
+# source('DataHandling.R')
 
 # Precalculate some numbers
 stock_n <- length(stockList)
@@ -316,6 +316,5 @@ hist(as.vector(MC_log))
 time_end <- Sys.time()
 time_model <- time_end- time_start
 
-outputFile_name <- paste('output/VaR_model2_pf',toString(pf_n),'_',toString(VaR_days),'day_',toString(VaR_alpha*100),'%VaR_',MC_n,'simulations_',strftime(Sys.time(),format = "%Y-%m-%d--%H-%M-%S"),'.txt',sep='')
-source('OutputFile.R')
+writeFile(2)
 

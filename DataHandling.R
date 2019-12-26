@@ -2,6 +2,9 @@
 # The files are taken from Wharton Research Data Services. The data points Adjustment factor and 
 # "Price - Close - Daily" are needed. 
 
+# Get the right path for the chosen portfolio
+pf_path <- paste('Data/Portfolio',toString(pf_n),'/',sep='')
+
 # List all stocks in path of portfolio
 allStocks <- list.files(pf_path)
 

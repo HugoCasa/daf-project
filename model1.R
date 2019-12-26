@@ -1,39 +1,44 @@
-rm(list=ls())
+# rm(list=ls())
+# 
+# # library for dataframe manipulation
+# library(fGarch)
+# library("MASS")
+# 
+# ## Parameters
+# 
+# # Portfolio directory in Data folder
+# # portfolio 1
+# #pf_path <- 'Data/Portfolio1/'
+# # portfolio 2
+# pf_path <- 'Data/Portfolio2/'
+# 
+# # Number of days ahead the VaR is calculated
+# VaR_days <- 5
+# 
+# # VaR alpha
+# VaR_alpha <- 0.05
+# 
+# # Monte Carlo sim
+# MC_n <- 1000
+# 
+# # Conditional distribution GARCH: Students t distribution
+# GARCHcondDist <- "std"
+# 
+# # GARCH model
+# #GARCH_model <- 'GARCH'
+# GARCH_model <- 'TGARCH'
+# 
+# # sample or fit t distribution on standardized returns
+# #ret_method <- "sample"
+# ret_method <- "fit"
+# 
+# ## Run data handling file 
+# source('DataHandling.R')
 
-# library for dataframe manipulation
-library(fGarch)
-library("MASS")
 
-## Parameters
+# Record start time
+time_start <- Sys.time()
 
-# Portfolio directory in Data folder
-# portfolio 1
-#pf_path <- 'Data/Portfolio1/'
-# portfolio 2
-pf_path <- 'Data/Portfolio2/'
-
-# Number of days ahead the VaR is calculated
-VaR_days <- 5
-
-# VaR alpha
-VaR_alpha <- 0.05
-
-# Monte Carlo sim
-MC_n <- 1000
-
-# Conditional distribution GARCH: Students t distribution
-GARCHcondDist <- "std"
-
-# GARCH model
-#GARCH_model <- 'GARCH'
-GARCH_model <- 'TGARCH'
-
-# sample or fit t distribution on standardized returns
-#ret_method <- "sample"
-ret_method <- "fit"
-
-## Run data handling file 
-source('DataHandling.R')
 
 # Precalculate some numbers for higher calculation performance
 pf_days <- length(pf_log)
@@ -150,8 +155,6 @@ exRatio      <- numberOfHits/length(pf_log_nday)
 plot(pf_log_nday)
 lines(VaR,col='green')
 
-# Kupiec test
-library(Rmpfr)
 
 # Higher precision is needed, otherwise numerator and denumerator are treated as 0
 N <- mpfr(length(pf_log),precBits= 128)
@@ -170,3 +173,18 @@ if(K < qchisq(p,1)){
   print("VaR model is not accurate at 99% level")
 }
 
+
+#=================================================================================================
+## Calculate some unconditional summary statistics for simulated portfolio returns
+
+# For simulated n day portfolio returns
+MC_log_mean <- mean(MC_log)
+MC_log_std <- sqrt(var(as.vector(MC_log)))
+MC_log_skewness <- skewness(as.vector(MC_log))
+MC_log_kurtosis <- kurtosis(as.vector(MC_log),method = 'moment')
+
+
+time_end <- Sys.time()
+time_model <- time_end- time_start
+
+writeFile(1)
