@@ -101,6 +101,13 @@ for(s in stockList){
   rm(list=paste(s,'nday',sep=''))
   rm(list=s)
 }
+
+#
+
+time <- as.Date(row.names(stock_ret))
+time <- time[VaR_days:length(time)]
+
+
 rm(list=c('df','t','allStocks','fileDir','name','priceAdjusted','s', 'i','logReturns','simpleReturns'))
 
 

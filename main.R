@@ -46,10 +46,40 @@ source('DataHandling.R')
 
 source('OutputFile.R')
 
+# Record start time
+overall_time_start <- Sys.time()
+
+# plot returns
+plot(time, pf_log_nday, type="p")
+
 ## MODEL 1
 
 source('model1.R')
 
+# save VaR of model 1 for plotting
+VaR1 <- VaR[1:length(time)]
+
 ## MODEL 2
 
 source('model2.R')
+
+# save VaR of model 2 for plotting
+VaR2 <- VaR[1:length(time)]
+
+## Results
+
+# Record end time
+overall_time_end <- Sys.time()
+overall_time <- overall_time_end - overall_time_start
+
+# plotting
+
+plot(time, pf_log_nday, type="p")
+lines(time, VaR1, col="red" )
+lines(time, VaR2, col="blue" )
+legend('topright',c('VaR Model 1', 'VaR Model 2'),col=c('red', 'blue'), lwd=2)
+
+# Show Results
+printFile()
+
+

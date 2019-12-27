@@ -35,10 +35,8 @@
 # ## Run data handling file 
 # source('DataHandling.R')
 
-
 # Record start time
 time_start <- Sys.time()
-
 
 # Precalculate some numbers for higher calculation performance
 pf_days <- length(pf_log)
@@ -183,9 +181,8 @@ MC_log_std <- sqrt(var(as.vector(MC_log)))
 MC_log_skewness <- skewness(as.vector(MC_log))
 MC_log_kurtosis <- kurtosis(as.vector(MC_log),method = 'moment')
 
-
 time_end <- Sys.time()
 time_model <- time_end- time_start
 
-printFile(1)
 writeFile(1)
+results <- fillData(1)

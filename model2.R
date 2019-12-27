@@ -8,8 +8,8 @@
 # 
 # rm(list=ls())
 # 
-# # Record start time
-# time_start <- Sys.time()
+# Record start time
+time_start <- Sys.time()
 # 
 # # ================================================================================================
 # ## Parameters
@@ -316,6 +316,6 @@ hist(as.vector(MC_log))
 time_end <- Sys.time()
 time_model <- time_end- time_start
 
-printFile(2)
 writeFile(2)
+results <- fillData(2)
 
