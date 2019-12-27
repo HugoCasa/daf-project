@@ -42,7 +42,7 @@ ret_method <- "sample"
 
 source('DataHandling.R')
 
-## File Output Function
+## Output Functions
 
 source('OutputFile.R')
 

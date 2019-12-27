@@ -58,6 +58,66 @@ writeFile = function(model_nb) {
   
   write("=====================================================",outputFile_name,append = TRUE)
   write(paste("Time passed:                   ",round(difftime(time_end,time_start,units='mins'),2),' minutes'),outputFile_name,append=TRUE)
-  
+}
 
+printFile = function(model_nb) {
+  
+  outputFile_name <- paste('output/VaR_model',model_nb,'_pf',toString(pf_n),'_',toString(VaR_days),'day_',toString(VaR_alpha*100),'%VaR_',MC_n,'simulations_',strftime(Sys.time(),format = "%Y-%m-%d--%H-%M-%S"),'.txt',sep='')
+  
+  cat("=====================================================",'\n')
+  cat("\n")
+  cat("Parameters:",'\n')
+  cat("\n")
+  
+  cat(paste("Portfolio number:              ",pf_n),'\n')
+  cat(paste("VaR model:                     ",toString(model_nb)),'\n')
+  cat("\n")
+  
+  cat(paste("VaR Days:                      ",VaR_days),'\n')
+  cat(paste("VaR Alpha:                     ",VaR_alpha),'\n')
+  cat(paste("Number simulations:            ",MC_n),'\n')
+  cat("\n")
+  
+  cat(paste("GARCH model:                   ",GARCH_model),'\n')
+  cat(paste("GARCH cond. dist:              ",GARCHcondDist),'\n')
+  if (model_nb == 1) {
+    cat("Only for model 1:",'\n')
+    cat(paste("Returns generation method:     ",ret_method),'\n')
+  }
+  
+  cat("=====================================================",'\n')
+  cat("\n")
+  cat("Results:",'\n')
+  cat("\n")
+  cat(paste("Mean VaR:                      ",round(mean(VaR),digits = 4)),'\n')
+  cat("",'\n')
+  cat(paste("Exceedance ratio:              ",round(as.numeric(exRatio),digits = 4)),'\n')
+  cat(paste("Kupiec K:                      ",round(K,digits = 4)),'\n')
+  cat("\n")
+  if(K < qchisq(p,1)){
+    cat("VaR model is accurate at 99% level",'\n')
+  }else{
+    cat("VaR model is not accurate at 99% level",'\n')
+  }
+  
+  cat("=====================================================",'\n')
+  cat("\n")
+  cat("Unconditional summary statistics:",'\n')
+  cat("\n")
+  cat("Simulated nday portfolio returns:",'\n')
+  cat("\n")
+  cat(paste("Mean:                          ",round(MC_log_mean,digits = 4)),'\n')
+  cat(paste("Std:                           ",round(MC_log_std,digits = 4)),'\n')
+  cat(paste("Skewness                       ",round(MC_log_skewness,digits = 4)),'\n')
+  cat(paste("Kurtosis:                      ",round(MC_log_kurtosis,digits = 4)),'\n')
+  cat("\n")
+  cat("Observed nday portfolio returns:",'\n')
+  cat("\n")
+  cat(paste("Mean:                          ",round(mean(pf_log_nday),digits = 4)),'\n')
+  cat(paste("Std:                           ",round(sqrt(var(pf_log_nday)),digits = 4)),'\n')
+  cat(paste("Skewness                       ",round(skewness(pf_log_nday),digits = 4)),'\n')
+  cat(paste("Kurtosis:                      ",round(kurtosis(pf_log_nday,method = 'moment'),digits = 4)),'\n')
+  
+  cat("=====================================================",'\n')
+  cat(paste("Time passed:                   ",round(difftime(time_end,time_start,units='mins'),2),' minutes'),'\n')
 }

@@ -187,4 +187,5 @@ MC_log_kurtosis <- kurtosis(as.vector(MC_log),method = 'moment')
 time_end <- Sys.time()
 time_model <- time_end- time_start
 
+printFile(1)
 writeFile(1)

@@ -316,5 +316,6 @@ hist(as.vector(MC_log))
 time_end <- Sys.time()
 time_model <- time_end- time_start
 
+printFile(2)
 writeFile(2)
 
