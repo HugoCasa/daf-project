@@ -27,7 +27,7 @@ writeFile = function(model_nb) {
   write("",outputFile_name,append=TRUE)
   write("Results:",outputFile_name,append=TRUE)
   write("",outputFile_name,append=TRUE)
-  write(paste("Mean VaR:                      ",round(mean(VaR),digits = 4)),outputFile_name,append=TRUE)
+  write(paste("Mean VaR:                      ",round(mean(-VaR),digits = 4)),outputFile_name,append=TRUE)
   write("",outputFile_name,append=TRUE)
   write(paste("Exceedance ratio:              ",round(as.numeric(exRatio),digits = 4)),outputFile_name,append=TRUE)
   write(paste("Kupiec K:                      ",round(K,digits = 4)),outputFile_name,append=TRUE)
@@ -126,7 +126,7 @@ fillData = function(model_nb) {
   
   results[[paste("Model", model_nb)]] <- 
     c(
-      round(mean(VaR),digits = 4),
+      round(mean(-VaR),digits = 4),
       round(as.numeric(exRatio),digits = 4),
       round(K,digits = 4),
       chisqtest,
