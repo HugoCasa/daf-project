@@ -22,7 +22,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # number of Monte Carlo simulations by day
-MC_n <- 1000
+MC_n <- 500
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"

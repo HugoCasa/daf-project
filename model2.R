@@ -55,7 +55,7 @@ stock_log_mean0 <- sweep(stock_log,2,stock_log_mean)
 #=================================================================================================
 ## GARCH model: Fit GARCH model on all marginal returns
 
-# Store all relevant parameters in variables:
+# Store all relevant parameters in variables. Preallocate all variables first:
 
 # GARCH model parameters:
 GARCH_mu <- vector(mode = "list", length = stock_n)
@@ -174,7 +174,7 @@ GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
   return(h)
 }
 
-# GJR GARCH as special version of fGARCH. From introduction to the rugarch package, p.9
+# GJR GARCH as special version of fGARCH. Formula from introduction to the rugarch package, p.9
 TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
   h <- omega + alpha*hPrevious*(abs(zPrevious)-gamma*zPrevious)^2 + beta*hPrevious
   return(h)
