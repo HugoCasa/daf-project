@@ -31,7 +31,7 @@ GARCHcondDist <- "std"
 #GARCH_model <- 'GARCH'
 GARCH_model <- 'TGARCH'
 
-# sample or fit t distribution on standardized returns (for model 1)
+# sample from observed returns or fit t distribution on standardized returns (for model 1)
 ret_method <- "sample"
 #ret_method <- "fit"
 
@@ -73,11 +73,22 @@ overall_time_end <- Sys.time()
 overall_time <- overall_time_end - overall_time_start
 
 # plotting
-
-plot(time, pf_log_nday, type="p")
-lines(time, VaR1, col="red" )
-lines(time, VaR2, col="blue" )
+plot_name <- paste('plots/VaR_model1_vs_model2_pf',toString(pf_n),'_',toString(VaR_days),'day_',toString(VaR_alpha),'VaR_',MC_n,'simulations_',strftime(Sys.time(),format = "%Y-%m-%d--%H-%M-%S"),'.pdf',sep='')
+plot_main <- paste('Portfolio ',toString(pf_n),' - ',toString(VaR_days),' day ','- ',toString(VaR_alpha*100),'% VaR',sep='')
+plot_ylab <- paste(toString(VaR_days),'day log returns')
+plot_xlab <- 'Year'
+pdf(plot_name)
+plot(index, pf_log_nday, type="p", main = plot_main,xlab = plot_xlab,ylab = plot_ylab)
+lines(index, VaR1, col="red" )
+lines(index, VaR2, col="blue" )
 legend('topright',c('VaR Model 1', 'VaR Model 2'),col=c('red', 'blue'), lwd=2)
+dev.off()
+
+h1 <- hist(-VaR1,breaks=30,freq=FALSE)
+h2 <- hist(-VaR2,breaks=30,freq=FALSE)
+plot_ymax <- max(max(unlist(h1['density'])),max(unlist(h2['density'])))
+plot(h1,col=rgb(1,0,0,1/2),ylim=c(0,plot_ymax),freq=FALSE)
+plot(h2,col=rgb(0,0,1,1/2),ylim=c(0,plot_ymax),freq=FALSE,add=TRUE)
 
 # Show Results
 printFile()
