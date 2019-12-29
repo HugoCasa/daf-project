@@ -19,10 +19,10 @@ pf_n <- 1
 VaR_days <- 5
 
 # VaR alpha
-VaR_alpha <- 0.05
+VaR_alpha <- 0.01
 
 # number of Monte Carlo simulations by day
-MC_n <- 500
+MC_n <- 1000
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -79,11 +79,17 @@ plot_name <- paste('plots/VaR_model1_vs_model2_pf',toString(pf_n),'_',toString(V
 plot_main <- paste('Portfolio ',toString(pf_n),' - ',toString(VaR_days),' day ','- ',toString(VaR_alpha*100),'% VaR',sep='')
 plot_ylab <- paste(toString(VaR_days),'day log returns')
 plot_xlab <- 'Year'
+
+hitSeq1 <- pf_log_nday < VaR1
+hitSeq2 <- pf_log_nday < VaR2
+differentExceedances <- hitSeq1 != hitSeq2
+
 pdf(plot_name)
 plot(index, pf_log_nday, type="p", main = plot_main,xlab = plot_xlab,ylab = plot_ylab)
 lines(index, VaR1, col="red" )
 lines(index, VaR2, col="blue" )
-legend('topright',c('VaR Model 1', 'VaR Model 2'),col=c('red', 'blue'), lwd=2)
+points(index[differentExceedances], pf_log_nday[differentExceedances], pch="+", col="green",cex=1.5)
+legend('topright',c('VaR Model 1', 'VaR Model 2','Differences exceedance'),col=c('red', 'blue','green'), pch=c('-','-','+'))
 dev.off()
 
 # Histogram VaR
