@@ -111,6 +111,41 @@ if(GARCH_model == 'TGARCH'){
   GARCH_Z <- GARCH_residuals/GARCH_sigma.t
 }
 
+## Plots related to GARCH. Made for one stock of the portfolio
+plot_stock_n <- 1
+
+# Stock returns
+plot_name <- paste('plots/',stockList[plot_stock_n],'_1_day_log_returns.pdf',sep='')
+plot_xlab <- 'Year'
+plot_ylab <- '1 day log returns'
+plot_main <- paste(stockList[plot_stock_n],'returns')
+pdf(plot_name)
+plot(index,stock_log[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
+dev.off()
+
+# Conditional volatility
+plot_name <- paste('plots/',stockList[plot_stock_n],'_volatility.pdf',sep='')
+plot_xlab <- 'Year'
+plot_ylab <- 'Std'
+plot_main <- paste(stockList[plot_stock_n],'annual stdev.')
+pdf(plot_name)
+plot(index,sqrt(252)*GARCH_sigma.t[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
+plot_stock_uncond_vol <- vector(mode='numeric',length = length(index))
+# Unconditional variance as mean of conditional variance
+plot_stock_uncond_vol[] <- mean(sqrt(252)*GARCH_sigma.t[,plot_stock_n][1:length(index)])
+lines(index,plot_stock_uncond_vol,col='green',lwd = 2)
+legend('topright',c(expression(paste(sqrt('h'['t']),': GARCH cond. stdev.')), expression(paste(sigma,':    uncond. stdev.'))),col=c('black', 'green'), lwd=2)
+dev.off()
+
+# Standardized residuals
+plot_name <- paste('plots/',stockList[plot_stock_n],'_standardized_residuals.pdf',sep='')
+plot_xlab <- 'Year'
+plot_ylab <- 'Std'
+plot_main <- paste(stockList[plot_stock_n],'standardized residuals')
+pdf(plot_name)
+plot(index,GARCH_Z[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
+dev.off()
+
 # Delete not needed variables to free working memory
 rm(list='GARCH')
 
@@ -174,7 +209,7 @@ GARCH_ht_function <- function(omega,alpha,beta,hPrevious,zPrevious){
   return(h)
 }
 
-# GJR GARCH as special version of fGARCH. Formula from introduction to the rugarch package, p.9
+# GJR TGARCH as special version of fGARCH. Formula from introduction to the rugarch package, p.9
 TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
   h <- omega + alpha*hPrevious*(abs(zPrevious)-gamma*zPrevious)^2 + beta*hPrevious
   return(h)
