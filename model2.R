@@ -111,41 +111,6 @@ if(GARCH_model == 'TGARCH'){
   GARCH_Z <- GARCH_residuals/GARCH_sigma.t
 }
 
-## Plots related to GARCH. Made for one stock of the portfolio
-plot_stock_n <- 1
-
-# Stock returns
-plot_name <- paste('plots/',stockList[plot_stock_n],'_1_day_log_returns.pdf',sep='')
-plot_xlab <- 'Year'
-plot_ylab <- '1 day log returns'
-plot_main <- paste(stockList[plot_stock_n],'returns')
-pdf(plot_name)
-plot(index,stock_log[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
-dev.off()
-
-# Conditional volatility
-plot_name <- paste('plots/',stockList[plot_stock_n],'_volatility.pdf',sep='')
-plot_xlab <- 'Year'
-plot_ylab <- 'Std'
-plot_main <- paste(stockList[plot_stock_n],'annual stdev.')
-pdf(plot_name)
-plot(index,sqrt(252)*GARCH_sigma.t[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
-plot_stock_uncond_vol <- vector(mode='numeric',length = length(index))
-# Unconditional variance as mean of conditional variance
-plot_stock_uncond_vol[] <- mean(sqrt(252)*GARCH_sigma.t[,plot_stock_n][1:length(index)])
-lines(index,plot_stock_uncond_vol,col='green',lwd = 2)
-legend('topright',c(expression(paste(sqrt('h'['t']),': GARCH cond. stdev.')), expression(paste(sigma,':    uncond. stdev.'))),col=c('black', 'green'), lwd=2)
-dev.off()
-
-# Standardized residuals
-plot_name <- paste('plots/',stockList[plot_stock_n],'_standardized_residuals.pdf',sep='')
-plot_xlab <- 'Year'
-plot_ylab <- 'Std'
-plot_main <- paste(stockList[plot_stock_n],'standardized residuals')
-pdf(plot_name)
-plot(index,GARCH_Z[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
-dev.off()
-
 # Delete not needed variables to free working memory
 rm(list='GARCH')
 
@@ -199,6 +164,7 @@ for(s in 1:stock_n){
 copula_dist <- mvdc(copula=claytonCopula(copula_theta, dim = length(stockList)), margins=copula_margins_list,
                     paramMargins = copula_paramMargins_list)
 
+
 #=================================================================================================
 ## GARCH functions to simulate conditional variance h(t) as function of h(t-1) and z(t-1) and the estimated parameters
 
@@ -237,12 +203,6 @@ for(s in 1:stock_n){
   MC_Z[s,,,] <- MC_Z[s,,,]*copula_Z_s[s]+copula_Z_mu[s]
 }  
 
-## Check correct sampling with dependence between modeled standardised residuals
-
-# Pairplot
-MC_residuals_plot <- t(MC_Z[,1,1,])
-colnames(MC_residuals_plot) <- stockList
-pairs.panels(t(MC_Z[,1,1,]))
 
 #==============================================
 ## Conditional variance
@@ -307,15 +267,6 @@ hitSeq       <- pf_ret_nday < VaR[1:length(pf_ret_nday)]
 numberOfHits <- sum(hitSeq)
 exRatio      <- numberOfHits/length(pf_ret_nday)
 
-
-# Plot returns and VaR, code as shown in class
-index = index[1:length(pf_ret_nday)]
-plot(index,pf_ret_nday, type="p")
-lines(index,VaR[1:length(pf_ret_nday)], col="red" )
-time = c(1:length(pf_ret_nday))
-points(index[hitSeq], pf_ret_nday[hitSeq], pch="+", col="green")
-
-
 ## Kupiec test
 
 # Higher precision is needed, otherwise numerator and denumerator are treated as 0
@@ -335,6 +286,111 @@ if(K < qchisq(p,1)){
 }else{
   print("VaR model is not accurate at 99% level")
 }
+
+#=================================================================================================
+## Plots
+
+## Plots related to GARCH. Made for one stock of the portfolio
+plot_stock_n <- 1
+
+# Stock returns
+plot_name <- paste('plots/',stockList[plot_stock_n],'_1_day_log_returns.pdf',sep='')
+plot_xlab <- 'Year'
+plot_ylab <- '1 day log returns'
+plot_main <- paste(stockList[plot_stock_n],'returns')
+pdf(plot_name)
+plot(index,stock_log[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
+dev.off()
+
+# Conditional volatility
+plot_name <- paste('plots/',stockList[plot_stock_n],'_volatility.pdf',sep='')
+plot_xlab <- 'Year'
+plot_ylab <- 'Std'
+plot_main <- paste(stockList[plot_stock_n],'annual stdev.')
+pdf(plot_name)
+plot(index,sqrt(252)*GARCH_sigma.t[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
+plot_stock_uncond_vol <- vector(mode='numeric',length = length(index))
+# Unconditional variance as mean of conditional variance
+plot_stock_uncond_vol[] <- mean(sqrt(252)*GARCH_sigma.t[,plot_stock_n][1:length(index)])
+lines(index,plot_stock_uncond_vol,col='green',lwd = 2)
+legend('topright',c(expression(paste(sqrt('h'['t']),': GARCH cond. stdev.')), expression(paste(sigma,':    uncond. stdev.'))),col=c('black', 'green'), lwd=2)
+dev.off()
+
+# Standardized residuals
+plot_name <- paste('plots/',stockList[plot_stock_n],'_standardized_residuals.pdf',sep='')
+plot_xlab <- 'Year'
+plot_ylab <- 'Std'
+plot_main <- paste(stockList[plot_stock_n],'standardized residuals')
+pdf(plot_name)
+plot(index,GARCH_Z[,plot_stock_n][1:length(index)],type='l',main = plot_main,xlab = plot_xlab,ylab=plot_ylab)
+dev.off()
+
+
+#==============================================
+## Plots related to copula
+
+# Fitting of t dist on standardized residuals
+plot_name <- paste('plots/',stockList[plot_stock_n],'_hist_standardized_residuals.pdf',sep='')
+plot_xlab <- 'Std'
+plot_ylab <- 'Density'
+plot_main <- paste(stockList[plot_stock_n],'histogram standardized residuals')
+pdf(plot_name)
+hist(sample(MC_Z[plot_stock_n,,,],10000),breaks=80,freq=F,col='blue',xlim=c(-6,6),ylim=c(0,0.6),main=plot_main,xlab=plot_xlab,ylab=plot_ylab)
+lines(seq(-6,6,0.01),dt((seq(-6,6,0.01)-copula_Z_mu[plot_stock_n])/copula_Z_s[plot_stock_n],copula_Z_df[plot_stock_n])/copula_Z_s[plot_stock_n],col='red',lwd=2)
+legend('topright',c('10000 standardized \nresiduals','Fitted t-distribution'),col=c('blue','red'), lwd=2)
+dev.off()
+
+
+# Plot dependence between two stocks returns, observed and simulated with copula
+plot_stock_n <- 1
+plot_stock_n2 <- 2
+
+plot_name <- paste('plots/',stockList[plot_stock_n],'-',stockList[plot_stock_n2],'_ovserved_vs_simulated_returns.pdf',sep='')
+
+plot_main <- 'Observed vs. simulated returns'
+plot_xlab <- paste(stockList[plot_stock_n],'log returns')
+plot_ylab <- paste(stockList[plot_stock_n2],'log returns')
+
+plot_stock_dependence <- matrix(nrow = stock_days,ncol=2)
+plot_stock_dependence[,plot_stock_n] <- MC_stock_log[plot_stock_n,,1,1]
+plot_stock_dependence[,plot_stock_n2] <- MC_stock_log[plot_stock_n2,,1,1]
+
+plot_xmin <- min(min(stock_log[,plot_stock_n]),min(plot_stock_dependence[,plot_stock_n]))
+plot_xmax <- max(max(stock_log[,plot_stock_n]),max(plot_stock_dependence[,plot_stock_n]))
+
+plot_ymin <- min(min(stock_log[,plot_stock_n2]),min(plot_stock_dependence[,plot_stock_n2]))
+plot_ymax <- max(max(stock_log[,plot_stock_n2]),max(plot_stock_dependence[,plot_stock_n2]))
+
+pdf(plot_name)
+plot(stock_log[,plot_stock_n],stock_log[,plot_stock_n2],xlim=c(plot_xmin,plot_xmax),ylim=c(plot_ymin,plot_ymax),xlab=plot_xlab,ylab=plot_ylab, main=plot_main,pch=16,cex=0.5)
+points(plot_stock_dependence[,plot_stock_n],plot_stock_dependence[,plot_stock_n2],col='red',pch=16,cex=0.5)
+legend('topleft',c('Observed','Simulated'),col=c('black','red'),pch=16,cex=1)
+dev.off()
+
+
+# Check correct sampling with dependence between modeled standardised residuals
+plot_name <- paste('plots/pf',toString(pf_n),'_copula_simulated_returns_spearmans_rho.pdf',sep='')
+plot_main <- expression(paste("Spearman's ",rho, " simulated returns"))
+
+MC_residuals_plot <- t(MC_stock_log[,1,1,])
+pdf(plot_name)
+pairs.panels(t(MC_Z[,1,1,]),method='spearman',main=plot_main)
+dev.off()
+
+# VaR and portfolio returns
+plot_name <- paste('plots/VaR_model2_pf',toString(pf_n),'_',toString(VaR_days),'day_',toString(VaR_alpha),'VaR_',MC_n,'simulations_',strftime(Sys.time(),format = "%Y-%m-%d--%H-%M-%S"),'.pdf',sep='')
+plot_main <- paste('Portfolio ',toString(pf_n),' - ',toString(VaR_days),' day ','- ',toString(VaR_alpha*100),'% VaR',sep='')
+plot_ylab <- paste(toString(VaR_days),'day log returns')
+plot_xlab <- 'Year'
+
+index = index[1:length(pf_log_nday)]
+
+pdf(plot_name)
+plot(index, pf_log_nday, main = plot_main,xlab = plot_xlab,ylab = plot_ylab)
+lines(index, VaR[1:length(pf_log_nday)], col="red" )
+points(index[hitSeq], pf_log_nday[hitSeq], pch="+", col="green")
+legend('topright',c('VaR Model 2','Exceedances'),col=c('red','green'), pch=c('-','+'))
+dev.off()
 
 #=================================================================================================
 ## Calculate some unconditional summary statistics for simulated portfolio returns
