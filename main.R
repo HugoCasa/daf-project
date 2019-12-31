@@ -32,8 +32,8 @@ GARCHcondDist <- "std"
 GARCH_model <- 'TGARCH'
 
 # sample from observed returns or fit t distribution on standardized returns (for model 1)
-ret_method <- "sample"
-#ret_method <- "fit"
+#ret_method <- "sample"
+ret_method <- "fit"
 
 
 ### Files
