@@ -13,7 +13,7 @@ library("psych")
 library("copula")
 
 # working directory
-setwd('/usr/daf-project')
+#setwd('/usr/R/daf-project')
 
 ### Parameters
 
