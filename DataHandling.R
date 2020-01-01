@@ -54,8 +54,6 @@ for(s in allStocks){
   
 }
 
-# TODO Check if all stocks have same length and same index
-
 # Create dataframe of the indiviual stock returns
 stock_ret <- matrix(nrow=length(get(stockList[1])$simpleReturns),ncol=length(stockList))
 stock_log <- matrix(nrow=length(get(stockList[1])$logReturns),ncol=length(stockList))
@@ -69,6 +67,9 @@ colnames(stock_ret) <- stockList
 colnames(stock_log) <- stockList
 
 index <- as.Date(rownames(get(stockList[1])),"%Y%m%d")
+
+### TEST
+index <- 1:length(index)
 
 stock_ret = as.data.frame(stock_ret, row.names = index)
 stock_log = as.data.frame(stock_log, row.names = index)
