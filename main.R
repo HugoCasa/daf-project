@@ -12,7 +12,7 @@ library("copula")
 
 # working directory
 setwd('/tmp/daf-project')
-Sys.setenv('R_MAX_VSIZE'=28000000000)
+# Sys.setenv('R_MAX_VSIZE'=28000000000)
 
 ### Parameters
 
