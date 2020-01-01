@@ -67,7 +67,6 @@ colnames(stock_ret) <- stockList
 colnames(stock_log) <- stockList
 
 index <- as.Date(rownames(get(stockList[1])),"%Y%m%d")
-print(index)
 
 # For use without linux 
 # stock_ret = as.data.frame(stock_ret, row.names = index)
