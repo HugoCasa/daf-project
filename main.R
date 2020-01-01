@@ -10,6 +10,9 @@ library("Rmpfr")
 library("psych")
 library("copula")
 
+# working directory
+setwd('/tmp/daf-project')
+
 ### Parameters
 
 # Portfolio number (1: 5 stocks, 2: 10 stocks)
