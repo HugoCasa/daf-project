@@ -24,10 +24,10 @@ pf_n <- 1
 VaR_days <- 5
 
 # VaR alpha
-VaR_alpha <- 0.01
+VaR_alpha <- 0.05
 
 # number of Monte Carlo simulations by day
-MC_n <- 500
+MC_n <- 5000
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -55,7 +55,7 @@ source('OutputFile.R')
 overall_time_start <- Sys.time()
 
 # plot returns
-# plot(time, pf_log_nday, type="p")
+plot(time, pf_log_nday, type="p")
 
 ## MODEL 1
 
