@@ -55,7 +55,7 @@ source('OutputFile.R')
 overall_time_start <- Sys.time()
 
 # plot returns
-plot(time, pf_log_nday, type="p")
+# plot(time, pf_log_nday, type="p")
 
 ## MODEL 1
 
