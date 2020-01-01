@@ -1,5 +1,7 @@
 # The following code creates the output file
 
+print(Sys.getenv('R_MAX_VSIZE'))
+
 # clean
 rm(list=ls())
 
@@ -11,8 +13,7 @@ library("psych")
 library("copula")
 
 # working directory
-setwd('/tmp/daf-project')
-# Sys.setenv('R_MAX_VSIZE'=28000000000)
+setwd('/usr/daf-project')
 
 ### Parameters
 
@@ -26,7 +27,7 @@ VaR_days <- 5
 VaR_alpha <- 0.01
 
 # number of Monte Carlo simulations by day
-MC_n <- 3000
+MC_n <- 500
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
