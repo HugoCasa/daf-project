@@ -3,7 +3,10 @@
 # "Price - Close - Daily" are needed. 
 
 # Get the right path for the chosen portfolio
-pf_path <- paste('Data/Portfolio',toString(pf_n),'/',sep='')
+#pf_path <- paste('Data/Portfolio',toString(pf_n),'/',sep='')
+
+# Path for cloud
+pf_path <- paste('tmp/daf-project/Data/Portfolio',toString(pf_n),'/',sep='')
 
 # List all stocks in path of portfolio
 allStocks <- list.files(pf_path)
