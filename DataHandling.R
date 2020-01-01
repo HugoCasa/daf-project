@@ -105,6 +105,9 @@ for(s in stockList){
 #
 
 time <- as.Date(row.names(stock_ret))
+
+# Test
+time <- index
 time <- time[VaR_days:length(time)]
 
 
