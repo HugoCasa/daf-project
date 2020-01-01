@@ -334,6 +334,7 @@ plot_name <- paste('plots/',stockList[plot_stock_n],'_hist_standardized_residual
 plot_xlab <- 'Std'
 plot_ylab <- 'Density'
 plot_main <- paste(stockList[plot_stock_n],'histogram standardized residuals')
+hist(sample(MC_Z[plot_stock_n,,,],10000),breaks=80,freq=F,col='blue',xlim=c(-6,6),ylim=c(0,0.6),main=plot_main,xlab=plot_xlab,ylab=plot_ylab)
 pdf(plot_name)
 hist(sample(MC_Z[plot_stock_n,,,],10000),breaks=80,freq=F,col='blue',xlim=c(-6,6),ylim=c(0,0.6),main=plot_main,xlab=plot_xlab,ylab=plot_ylab)
 lines(seq(-6,6,0.01),dt((seq(-6,6,0.01)-copula_Z_mu[plot_stock_n])/copula_Z_s[plot_stock_n],copula_Z_df[plot_stock_n])/copula_Z_s[plot_stock_n],col='red',lwd=2)
@@ -345,7 +346,7 @@ dev.off()
 plot_stock_n <- 1
 plot_stock_n2 <- 2
 
-plot_name <- paste('plots/',stockList[plot_stock_n],'-',stockList[plot_stock_n2],'_ovserved_vs_simulated_returns.pdf',sep='')
+plot_name <- paste('plots/',stockList[plot_stock_n],'-',stockList[plot_stock_n2],'_observed_vs_simulated_returns.pdf',sep='')
 
 plot_main <- 'Observed vs. simulated returns'
 plot_xlab <- paste(stockList[plot_stock_n],'log returns')
