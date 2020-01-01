@@ -11,7 +11,7 @@ library("psych")
 library("copula")
 
 # working directory
-setwd('/tmp/daf-project')
+#setwd('/tmp/daf-project')
 
 ### Parameters
 
