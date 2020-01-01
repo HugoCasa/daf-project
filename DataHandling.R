@@ -104,7 +104,7 @@ for(s in stockList){
 
 #
 
-time <- as.Date(row.names(stock_ret))
+#time <- as.Date(row.names(stock_ret))
 
 # Test
 time <- index
