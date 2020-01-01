@@ -67,14 +67,13 @@ colnames(stock_ret) <- stockList
 colnames(stock_log) <- stockList
 
 index <- as.Date(rownames(get(stockList[1])),"%Y%m%d")
+print(index)
 
-### TEST
-index <- 1:length(index)
+# stock_ret = as.data.frame(stock_ret, row.names = index)
+# stock_log = as.data.frame(stock_log, row.names = index)
 
-stock_ret = as.data.frame(stock_ret, row.names = index)
-stock_log = as.data.frame(stock_log, row.names = index)
-
-
+stock_ret = as.data.frame(stock_ret)
+stock_log = as.data.frame(stock_log)
 
 ## Portfolio returns
 
