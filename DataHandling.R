@@ -69,6 +69,7 @@ colnames(stock_log) <- stockList
 index <- as.Date(rownames(get(stockList[1])),"%Y%m%d")
 print(index)
 
+# For use without linux 
 # stock_ret = as.data.frame(stock_ret, row.names = index)
 # stock_log = as.data.frame(stock_log, row.names = index)
 
@@ -102,11 +103,7 @@ for(s in stockList){
   rm(list=s)
 }
 
-#
-
-#time <- as.Date(row.names(stock_ret))
-
-# Test
+# Use the index as time axis
 time <- index
 time <- time[VaR_days:length(time)]
 
