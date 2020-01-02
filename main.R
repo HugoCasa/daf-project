@@ -1,6 +1,8 @@
 # The following code creates the output file
 
 print(Sys.getenv('R_MAX_VSIZE'))
+print(Sys.getenv('R_MAX_MEM_SIZE'))
+
 
 # clean
 rm(list=ls())
@@ -27,7 +29,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # number of Monte Carlo simulations by day
-MC_n <- 1500
+MC_n <- 5000
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
