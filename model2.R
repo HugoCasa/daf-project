@@ -10,6 +10,7 @@
 # 
 # Record start time
 time_start <- Sys.time()
+rm(list=c('MC_Z','MC_h','MC_stock_log'))
 # 
 # # ================================================================================================
 # ## Parameters
@@ -195,69 +196,115 @@ TGARCH_ht_function <- function(omega,alpha,beta,gamma,hPrevious,zPrevious){
 # In array the dimensions are filled consecutively with data. In the MC_Z array the first dimension are 
 # the different stocks, so that they can be filled with the correct dependence. The residuals in other 3 dimensions are i.i.d.
 
-# Normal that this line takes a lot of time
-MC_Z <- array(as.vector(t(rMvdc(copula_dist, n=MC_n*VaR_days*stock_days))), dim=c(stock_n,stock_days,VaR_days,MC_n))
+# For memory limitation reasons this part of the program is split up depending on working memory of the pc
 
-# Scale back all standardized residuals
-for(s in 1:stock_n){
-  MC_Z[s,,,] <- MC_Z[s,,,]*copula_Z_s[s]+copula_Z_mu[s]
-}  
-
-
-#==============================================
-## Conditional variance
-
-# Create array to store h(t)
-MC_h <- array(dim=c(stock_n,stock_days,VaR_days,MC_n))
-
-# The variance of the first simulated day is taken from GARCH model and is the same for all simulated days
-for(s in 1:stock_n){
-  MC_h[s,,1,] <- matrix(GARCH_h.t[,s],nrow=stock_days,ncol=MC_n)
-}
-
-# Apply GARCH or TGARCH function. Function works over the 2 dimensions all days of the model 
-# and all simulated days at the same time
-if(GARCH_model == 'GARCH'){
+VaR_part_function <- function(h.t){
+  VaR_part_trading_days <- nrow(h.t)
+  # Normal that this line takes a lot of time
+  MC_Z <- array(as.vector(t(rMvdc(copula_dist, n=MC_n*VaR_days*VaR_part_trading_days))), dim=c(stock_n,VaR_part_trading_days,VaR_days,MC_n))
+  
+  # Scale back all standardized residuals
   for(s in 1:stock_n){
-    for(i in 2:VaR_days){
-      MC_h[s,,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
+    MC_Z[s,,,] <- MC_Z[s,,,]*copula_Z_s[s]+copula_Z_mu[s]
+  }  
+  
+  
+  #==============================================
+  ## Conditional variance
+  
+  # Create array to store h(t)
+  MC_h <- array(dim=c(stock_n,VaR_part_trading_days,VaR_days,MC_n))
+  
+  # The variance of the first simulated day is taken from GARCH model and is the same for all simulated days
+  for(s in 1:stock_n){
+    MC_h[s,,1,] <- matrix(h.t[,s],nrow=VaR_part_trading_days,ncol=MC_n)
+  }
+  
+  # Apply GARCH or TGARCH function. Function works over the 2 dimensions all days of the model 
+  # and all simulated days at the same time
+  if(GARCH_model == 'GARCH'){
+    for(s in 1:stock_n){
+      for(i in 2:VaR_days){
+        MC_h[s,,i,] <- GARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
+      }
     }
   }
-}
-if(GARCH_model == 'TGARCH'){
-  for(s in 1:stock_n){
-    for(i in 2:VaR_days){
-      MC_h[s,,i,] <- TGARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],GARCH_gamma[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
+  if(GARCH_model == 'TGARCH'){
+    for(s in 1:stock_n){
+      for(i in 2:VaR_days){
+        MC_h[s,,i,] <- TGARCH_ht_function(GARCH_omega[[s]],GARCH_alpha[[s]],GARCH_beta[[s]],GARCH_gamma[[s]],MC_h[s,,i-1,],MC_Z[s,,i-1,])
+      }
     }
   }
+  
+  #=================================================================================================
+  ## Simulate returns and get VaR
+  
+  # Multiply sampled standardized returns with conditional volatility. Works over all 4 dimensions
+  MC_stock_log <- MC_Z*sqrt(MC_h)
+  
+  # Add back the mean
+  for(s in 1:stock_n){
+    MC_stock_log[s,,,] <- MC_stock_log[s,,,] + stock_log_mean[s]
+  }
+  
+  # Get cumulative returns of the n days. Apply function on the other 3 dimensions
+  MC_log <- apply(MC_stock_log,c(1,2,4),sum)
+  
+  # Change to simple returns because they aggregate over assets
+  MC_ret <- exp(MC_log)-1
+  
+  # Get portfolio returns as mean of the returns of the different stocks
+  MC_ret <- apply(MC_ret,c(2,3),mean)
+  
+  # Change back to log returns
+  MC_log <- log(MC_ret+1)
+  
+  # Apply quantile function to get VaR
+  VaR_part <- apply(MC_log,1,quantile,VaR_alpha)
+  ret <- list("VaR" = VaR_part,"MC_Z" = MC_Z,"MC_stock_log" = MC_stock_log)
+  return(ret)
+  rm(list=c('ret','MC_Z','MC_h','MC_stock_log'))
 }
 
-#=================================================================================================
-## Simulate returns and get VaR
+VaR_part_n <- round(((MC_n*VaR_days*stock_days*stock_n*4)/(memory_mb*50000)),0)
 
-# Multiply sampled standardized returns with conditional volatility. Works over all 4 dimensions
-MC_stock_log <- MC_Z*sqrt(MC_h)
-
-# Add back the mean
-for(s in 1:stock_n){
-  MC_stock_log[s,,,] <- MC_stock_log[s,,,] + stock_log_mean[s]
+if(VaR_part_n < 2){
+  VaR_part_n <- 2
 }
 
-# Get cumulative returns of the n days. Apply function on the other 3 dimensions
-MC_log <- apply(MC_stock_log,c(1,2,4),sum)
+VaR_part_start_end <- matrix(nrow = VaR_part_n,ncol = 2)
 
-# Change to simple returns because they aggregate over assets
-MC_ret <- exp(MC_log)-1
+VaR_part_length <- round(nrow(GARCH_h.t)/VaR_part_n,0)
 
-# Get portfolio returns as mean of the returns of the different stocks
-MC_ret <- apply(MC_ret,c(2,3),mean)
+VaR_part_start_end[1,1] <- 1
 
-# Change back to log returns
-MC_log <- log(MC_ret+1)
+for(i in 1:(VaR_part_n-1)){
+  VaR_part_start_end[i,2] <- VaR_part_start_end[i,1] + VaR_part_length
+  VaR_part_start_end[(i+1),1] <- VaR_part_start_end[i,2] + 1
+}
 
-# Apply quantile function to get VaR
-VaR <- apply(MC_log,1,quantile,VaR_alpha)
+VaR_part_start_end[VaR_part_n,2] <- nrow(GARCH_h.t)
 
+VaR <- vector(mode='numeric',length = nrow(GARCH_h.t))
+
+MC_stock_log <- matrix(nrow=nrow(GARCH_h.t),ncol=stock_n)
+
+print(VaR_part_n)
+
+
+for(i in 1:VaR_part_n){
+  print('Model 2:')
+  print(i/VaR_part_n)
+  VaR_part_ret <- VaR_part_function(GARCH_h.t[VaR_part_start_end[i,1]:VaR_part_start_end[i,2],])
+  
+  VaR_part <- VaR_part_ret$VaR
+  VaR[VaR_part_start_end[i,1]:VaR_part_start_end[i,2]] <- VaR_part
+  
+  MC_Z <- VaR_part_ret$MC_Z
+  MC_stock_log[VaR_part_start_end[i,1]:VaR_part_start_end[i,2],] <- t(VaR_part_ret$MC_stock_log[,,1,1])
+  
+}
 
 #=================================================================================================
 ## Check model
@@ -352,9 +399,13 @@ plot_main <- 'Observed vs. simulated returns'
 plot_xlab <- paste(stockList[plot_stock_n],'log returns')
 plot_ylab <- paste(stockList[plot_stock_n2],'log returns')
 
-plot_stock_dependence <- matrix(nrow = stock_days,ncol=2)
-plot_stock_dependence[,plot_stock_n] <- MC_stock_log[plot_stock_n,,1,1]
-plot_stock_dependence[,plot_stock_n2] <- MC_stock_log[plot_stock_n2,,1,1]
+plot_stock_dependence <- matrix(nrow = nrow(GARCH_h.t),ncol=2)
+plot_stock_dependence[,plot_stock_n] <- MC_stock_log[,plot_stock_n]
+plot_stock_dependence[,plot_stock_n2] <- MC_stock_log[,plot_stock_n2]
+#plot_stock_dependence[,plot_stock_n] <- as.vector(MC_stock_log[plot_stock_n,1,,])
+#plot_stock_dependence[,plot_stock_n2] <- as.vector(MC_stock_log[plot_stock_n2,1,,])
+
+#plot_stock_dependence <- plot_stock_dependence[1:nrow(stock_log),]
 
 plot_xmin <- min(min(stock_log[,plot_stock_n]),min(plot_stock_dependence[,plot_stock_n]))
 plot_xmax <- max(max(stock_log[,plot_stock_n]),max(plot_stock_dependence[,plot_stock_n]))
@@ -373,7 +424,7 @@ dev.off()
 plot_name <- paste('plots/pf',toString(pf_n),'_copula_simulated_returns_spearmans_rho.pdf',sep='')
 plot_main <- expression(paste("Spearman's ",rho, " simulated returns"))
 
-MC_residuals_plot <- t(MC_stock_log[,1,1,])
+MC_residuals_plot <- t(MC_stock_log)
 pdf(plot_name)
 pairs.panels(t(MC_Z[,1,1,]),method='spearman',main=plot_main)
 dev.off()
