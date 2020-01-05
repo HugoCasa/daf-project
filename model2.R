@@ -262,21 +262,28 @@ VaR_part_function <- function(h.t){
   
   # Apply quantile function to get VaR
   VaR_part <- apply(MC_log,1,quantile,VaR_alpha)
-  ret <- list("VaR" = VaR_part,"MC_Z" = MC_Z,"MC_stock_log" = MC_stock_log)
+  
+  # Return several variables
+  ret <- list("VaR" = VaR_part,"MC_Z" = MC_Z,"MC_stock_log" = MC_stock_log,'MC_log' = MC_log)
   return(ret)
-  rm(list=c('ret','MC_Z','MC_h','MC_stock_log'))
+  
+  # Remove to free working memory
+  rm(list=c('ret','MC_Z','MC_h','MC_stock_log','MC_log'))
 }
 
+## In order to use the working memory efficiently, the simulation is split up into several parts
+
+# This tries to estimate the optimal number of parts
 VaR_part_n <- round(((MC_n*VaR_days*stock_days*stock_n*4)/(memory_mb*50000)),0)
 
+# Loop needs at least two parts to run
 if(VaR_part_n < 2){
   VaR_part_n <- 2
 }
 
+# Determine the start and the end day of the parts and save them in a matrix
 VaR_part_start_end <- matrix(nrow = VaR_part_n,ncol = 2)
-
 VaR_part_length <- round(nrow(GARCH_h.t)/VaR_part_n,0)
-
 VaR_part_start_end[1,1] <- 1
 
 for(i in 1:(VaR_part_n-1)){
@@ -284,26 +291,32 @@ for(i in 1:(VaR_part_n-1)){
   VaR_part_start_end[(i+1),1] <- VaR_part_start_end[i,2] + 1
 }
 
+# Variables to store the resulting VaR
 VaR_part_start_end[VaR_part_n,2] <- nrow(GARCH_h.t)
-
 VaR <- vector(mode='numeric',length = nrow(GARCH_h.t))
 
+# Store for plots
 MC_stock_log <- matrix(nrow=nrow(GARCH_h.t),ncol=stock_n)
+MC_log <- matrix(nrow=nrow(GARCH_h.t),ncol=MC_n)
 
-print(VaR_part_n)
-
-
+# For every part calculate the VaR
 for(i in 1:VaR_part_n){
+  
+  # To see how far the sim is
   print('Model 2:')
   print(i/VaR_part_n)
+  
+  # Use the function to get VaR of this part
   VaR_part_ret <- VaR_part_function(GARCH_h.t[VaR_part_start_end[i,1]:VaR_part_start_end[i,2],])
   
+  # Get the data from the returned list
   VaR_part <- VaR_part_ret$VaR
   VaR[VaR_part_start_end[i,1]:VaR_part_start_end[i,2]] <- VaR_part
   
+  # Store for plots
   MC_Z <- VaR_part_ret$MC_Z
   MC_stock_log[VaR_part_start_end[i,1]:VaR_part_start_end[i,2],] <- t(VaR_part_ret$MC_stock_log[,,1,1])
-  
+  MC_log[VaR_part_start_end[i,1]:VaR_part_start_end[i,2],] <- VaR_part_ret$MC_log
 }
 
 #=================================================================================================
