@@ -15,7 +15,7 @@ library("psych")
 library("copula")
 
 # working directory
-# setwd('/usr/R/daf-project')
+setwd('/usr/R/daf-project')
 
 ### Parameters
 
@@ -26,10 +26,10 @@ pf_n <- 2
 VaR_days <- 10
 
 # VaR alpha
-VaR_alpha <- 0.01
+VaR_alpha <- 0.05
 
 # number of Monte Carlo simulations by day
-MC_n <- 10000
+MC_n <- 5000
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -43,7 +43,7 @@ ret_method <- "sample"
 # ret_method <- "fit"
 
 # Memory of the pc in megabytes
-memory_mb <- 28000
+memory_mb <- 18000
 
 
 ### Files
