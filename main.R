@@ -20,13 +20,13 @@ setwd('/usr/R/daf-project')
 ### Parameters
 
 # Portfolio number (1: 5 stocks, 2: 10 stocks)
-pf_n <- 1
+pf_n <- 2
 
 # Number of days ahead the VaR is calculated
 VaR_days <- 10
 
 # VaR alpha
-VaR_alpha <- 0.01
+VaR_alpha <- 0.05
 
 # number of Monte Carlo simulations by day
 MC_n <- 5000
