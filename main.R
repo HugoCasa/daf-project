@@ -26,7 +26,7 @@ pf_n <- 2
 VaR_days <- 10
 
 # VaR alpha
-VaR_alpha <- 0.05
+VaR_alpha <- 0.01
 
 # number of Monte Carlo simulations by day
 MC_n <- 5000
