@@ -23,7 +23,7 @@ setwd('/usr/R/daf-project')
 pf_n <- 1
 
 # Number of days ahead the VaR is calculated
-VaR_days <- 10
+VaR_days <- 5
 
 # VaR alpha
 VaR_alpha <- 0.05
