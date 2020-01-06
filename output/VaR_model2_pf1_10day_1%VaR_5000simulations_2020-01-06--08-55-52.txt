@@ -2,7 +2,7 @@
 
 Parameters:
 
-Portfolio number:               2
+Portfolio number:               1
 VaR model:                      2
 
 VaR Days:                       10
@@ -15,10 +15,10 @@ GARCH cond. dist:               std
 
 Results:
 
-Mean VaR:                       0.0768
+Mean VaR:                       0.0948
 
-Exceedance ratio:               0.0108
-Kupiec K:                       0.4223
+Exceedance ratio:               0.0126
+Kupiec K:                       4.7969
 
 VaR model is accurate at 99% level
 =====================================================
@@ -27,16 +27,16 @@ Unconditional summary statistics:
 
 Simulated nday portfolio returns:
 
-Mean:                           0.0049
-Std:                            0.0323
-Skewness                        -0.3584
-Kurtosis:                       8.4773
+Mean:                           0.0048
+Std:                            0.0412
+Skewness                        0.7443
+Kurtosis:                       136.8616
 
 Observed nday portfolio returns:
 
-Mean:                           0.005
-Std:                            0.0336
-Skewness                        -0.4727
-Kurtosis:                       7.0835
+Mean:                           0.0051
+Std:                            0.0406
+Skewness                        -0.3755
+Kurtosis:                       4.9259
 =====================================================
-Time passed:                    206.02  minutes
+Time passed:                    104.75  minutes
