@@ -1,4 +1,9 @@
-# The following code creates the output file
+##############################################################
+######################### MAIN FILE ##########################
+################# PLEASE EXECUTE THIS FILE ###################
+## THE OTHER FILES WILL AUTOMATICALLY BE CALLED WHEN NEEDED ##
+##############################################################
+
 
 # clean
 rm(list=ls())
