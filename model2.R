@@ -1,46 +1,9 @@
-## Libraries
 
-# library("copula")
-# library("fGarch")
-# library("MASS")
-# library("psych")
-# library("Rmpfr")
-# 
-# rm(list=ls())
-# 
 # Record start time
 time_start <- Sys.time()
+
+# Remove not needed variables
 rm(list=c('MC_Z','MC_h','MC_stock_log'))
-# 
-# # ================================================================================================
-# ## Parameters
-# 
-# # Portfolio number (1: 5 stocks, 2: 10 stocks)
-# pf_n <- 1
-# 
-# # Number of days ahead the VaR is calculated
-# VaR_days <- 5
-# 
-# # VaR alpha
-# VaR_alpha <- 0.05
-# 
-# # Monte Carlo simulation number
-# MC_n <- 500
-# 
-# # GARCH model
-# #GARCH_model <- 'GARCH'
-# GARCH_model <- 'TGARCH'
-# 
-# # Conditional distribution GARCH: Students t distribution
-# GARCHcondDist <- "std"
-# 
-# #=================================================================================================
-# ## Data handling
-# 
-# pf_path <- paste('Data/Portfolio',toString(pf_n),'/',sep='')
-# 
-# # Run data handling file 
-# source('DataHandling.R')
 
 # Precalculate some numbers
 stock_n <- length(stockList)
