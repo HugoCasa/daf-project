@@ -1,9 +1,5 @@
 # The following code creates the output file
 
-print(Sys.getenv('R_MAX_VSIZE'))
-print(Sys.getenv('R_MAX_MEM_SIZE'))
-
-
 # clean
 rm(list=ls())
 
@@ -14,8 +10,6 @@ library("Rmpfr")
 library("psych")
 library("copula")
 
-# working directory
-setwd('/usr/R/daf-project')
 
 ### Parameters
 
@@ -29,7 +23,7 @@ VaR_days <- 5
 VaR_alpha <- 0.05
 
 # number of Monte Carlo simulations by day
-MC_n <- 5000
+MC_n <- 700
 
 # Conditional distribution GARCH: Students t distribution
 GARCHcondDist <- "std"
@@ -42,9 +36,8 @@ GARCH_model <- 'TGARCH'
 ret_method <- "sample"
 # ret_method <- "fit"
 
-# Memory of the pc in megabytes
-memory_mb <- 18000
-
+# Memory of the pc in megabytes (ADAPT TO COMPUTER)
+memory_mb <- 4000
 
 ### Files
 
